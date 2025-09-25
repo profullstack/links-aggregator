@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -45,7 +45,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml* ./
 
 # Install only production dependencies
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --no-frozen-lockfile
 
 # Copy tor configuration
 COPY docker/torrc /etc/tor/torrc
