@@ -41,6 +41,31 @@
 	function handleGetStarted() {
 		goto('/add');
 	}
+
+	async function handleSurpriseMe() {
+		try {
+			const response = await fetch('/api/random?onion=true');
+			const result = await response.json();
+
+			if (response.ok && result.link) {
+				// Open random onion link in new tab
+				window.open(result.link.url, '_blank');
+			} else {
+				// Fallback to any random link if no onion links available
+				const fallbackResponse = await fetch('/api/random');
+				const fallbackResult = await fallbackResponse.json();
+				
+				if (fallbackResponse.ok && fallbackResult.link) {
+					window.open(fallbackResult.link.url, '_blank');
+				} else {
+					alert('No links available for surprise!');
+				}
+			}
+		} catch (err) {
+			console.error('Surprise me error:', err);
+			alert('Failed to get random link');
+		}
+	}
 </script>
 
 <svelte:head>
@@ -77,14 +102,25 @@
 					</div>
 				</div>
 
-				<div class="mt-6">
-					<button 
+				<div class="mt-6 space-x-4">
+					<button
 						on:click={handleGetStarted}
 						class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
 					>
 						Add Links
 					</button>
+					
+					<button
+						on:click={handleSurpriseMe}
+						class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+					>
+						🎲 Surprise me!
+					</button>
 				</div>
+				
+				<p class="text-sm text-gray-500 mt-2">
+					"Surprise me!" opens a random onion link in a new tab
+				</p>
 			{/if}
 		</div>
 	</div>
@@ -142,10 +178,13 @@
 												target="_blank"
 												rel="noopener noreferrer"
 												class="text-sm text-blue-600 hover:text-blue-800 hover:underline line-clamp-2 block"
-												title={link.description || link.title}
+												title={link.description || link.title || link.url}
 											>
-												{link.title}
+												{link.title || link.description || link.url}
 											</a>
+											{#if link.description && link.title !== link.description}
+												<p class="text-xs text-gray-500 mt-1 line-clamp-1">{link.description}</p>
+											{/if}
 											<div class="flex items-center justify-between mt-1">
 												<VoteButtons linkId={link.id} initialScore={link.vote_count} size="small" />
 											</div>

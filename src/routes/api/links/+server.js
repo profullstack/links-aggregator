@@ -60,31 +60,43 @@ export async function GET({ url }) {
 		const offset = parseInt(url.searchParams.get('offset') || '0');
 		const category = url.searchParams.get('category');
 
-		let query = supabase
-			.from('links')
-			.select(`
-				*,
-				link_categories!inner(
-					categories!inner(name)
-				)
-			`)
-			.eq('is_public', true);
-
-		// Filter by category if specified
 		if (category) {
-			query = query.eq('link_categories.categories.name', category);
+			// Filter by specific category using INNER JOIN
+			const { data, error } = await supabase
+				.from('links')
+				.select(`
+					*,
+					link_categories!inner(
+						categories!inner(name)
+					)
+				`)
+				.eq('is_public', true)
+				.eq('link_categories.categories.name', category.toLowerCase())
+				.order('created_at', { ascending: false })
+				.range(offset, offset + limit - 1);
+
+			if (error) {
+				console.error('Category filter error:', error);
+				return json({ error: error.message }, { status: 500 });
+			}
+
+			return json({ links: data || [] });
+		} else {
+			// Get all links without category filtering
+			const { data, error } = await supabase
+				.from('links')
+				.select('*')
+				.eq('is_public', true)
+				.order('created_at', { ascending: false })
+				.range(offset, offset + limit - 1);
+
+			if (error) {
+				console.error('Links fetch error:', error);
+				return json({ error: error.message }, { status: 500 });
+			}
+
+			return json({ links: data || [] });
 		}
-
-		const { data, error } = await query
-			.order('created_at', { ascending: false })
-			.range(offset, offset + limit - 1);
-
-		if (error) {
-			console.error('Supabase error:', error);
-			return json({ error: error.message }, { status: 500 });
-		}
-
-		return json({ links: data || [] });
 	} catch (err) {
 		console.error('API error:', err);
 		return json({ error: 'Internal server error' }, { status: 500 });

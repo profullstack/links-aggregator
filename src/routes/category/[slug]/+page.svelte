@@ -179,17 +179,17 @@
 							
 							<div class="flex-1 min-w-0">
 								<h3 class="text-lg font-semibold text-gray-900 mb-2">
-									<a 
-										href={link.url} 
-										target="_blank" 
+									<a
+										href={link.url}
+										target="_blank"
 										rel="noopener noreferrer"
 										class="hover:text-blue-600 transition-colors"
 									>
-										{link.title}
+										{link.title || link.description || link.url}
 									</a>
 								</h3>
 								
-								{#if link.description}
+								{#if link.description && link.title !== link.description}
 									<p class="text-gray-600 mb-3 line-clamp-2">{link.description}</p>
 								{/if}
 								
