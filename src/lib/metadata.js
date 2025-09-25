@@ -1,7 +1,7 @@
 /**
- * Fetch metadata from a URL
+ * Fetch metadata from a URL with full HTML analysis
  * @param {string} url - The URL to fetch metadata from
- * @returns {Promise<{title: string, description: string, image: string, siteName: string}>}
+ * @returns {Promise<{title: string, description: string, image: string, siteName: string, fullText: string, category: string}>}
  */
 export async function fetchUrlMetadata(url) {
 	try {
@@ -17,24 +17,51 @@ export async function fetchUrlMetadata(url) {
 
 		const html = await response.text();
 		
-		// Extract metadata using regex patterns
-		const metadata = {
-			title: extractMetaContent(html, 'title') || extractTitle(html) || getDomainFromUrl(url),
-			description: extractMetaContent(html, 'description') || '',
-			image: extractMetaContent(html, 'image') || '',
-			siteName: extractMetaContent(html, 'site_name') || getDomainFromUrl(url)
-		};
+		// Extract metadata using regex patterns with fallbacks
+		let title = extractMetaContent(html, 'title') || extractTitle(html);
+		let description = extractMetaContent(html, 'description');
+		let image = extractMetaContent(html, 'image');
+		let siteName = extractMetaContent(html, 'site_name');
+		
+		// Extract body text for better categorization and fallbacks
+		const fullText = extractBodyText(html);
+		
+		// Fallback to content parsing if meta tags are missing
+		if (!title) {
+			title = extractTitleFromContent(html) || getDomainFromUrl(url);
+		}
+		
+		if (!description) {
+			description = extractDescriptionFromContent(fullText);
+		}
+		
+		if (!siteName) {
+			siteName = getDomainFromUrl(url);
+		}
+		
+		// Detect category based on all available content
+		const category = detectCategory(title, description, fullText);
 
-		return metadata;
+		return {
+			title,
+			description,
+			image,
+			siteName,
+			fullText: fullText.substring(0, 500), // Limit stored text
+			category
+		};
 	} catch (error) {
 		console.error(`Error fetching metadata for ${url}:`, error);
 		
-		// Fallback to URL-based metadata
+		// Fallback to URL-based metadata with default category
+		const domain = getDomainFromUrl(url);
 		return {
-			title: getDomainFromUrl(url),
+			title: domain,
 			description: '',
 			image: '',
-			siteName: getDomainFromUrl(url)
+			siteName: domain,
+			fullText: '',
+			category: 'technology' // Default fallback category
 		};
 	}
 }
@@ -108,14 +135,49 @@ function getDomainFromUrl(url) {
 }
 
 /**
- * Detect category based on content analysis
+ * Extract body text from HTML for content analysis
+ * @param {string} html - HTML content
+ * @returns {string} Extracted text content
+ */
+function extractBodyText(html) {
+	// Remove script and style tags
+	let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+	text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+	
+	// Extract text from common content areas
+	const contentPatterns = [
+		/<body[^>]*>([\s\S]*?)<\/body>/i,
+		/<main[^>]*>([\s\S]*?)<\/main>/i,
+		/<article[^>]*>([\s\S]*?)<\/article>/i,
+		/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+	];
+	
+	let bodyText = '';
+	for (const pattern of contentPatterns) {
+		const match = html.match(pattern);
+		if (match && match[1]) {
+			bodyText = match[1];
+			break;
+		}
+	}
+	
+	// Remove HTML tags and clean up
+	bodyText = bodyText.replace(/<[^>]+>/g, ' ');
+	bodyText = bodyText.replace(/\s+/g, ' ');
+	bodyText = bodyText.trim();
+	
+	return bodyText;
+}
+
+/**
+ * Detect category based on comprehensive content analysis
  * @param {string} title - Page title
  * @param {string} description - Page description
- * @param {string} domain - Domain name
- * @returns {string|null} Suggested category name
+ * @param {string} bodyText - Page body content
+ * @returns {string} Required category name (never null)
  */
-export function detectCategory(title, description, domain) {
-	const content = `${title} ${description} ${domain}`.toLowerCase();
+export function detectCategory(title, description, bodyText) {
+	const content = `${title} ${description} ${bodyText}`.toLowerCase();
 	
 	// Category keywords mapping
 	const categoryKeywords = {

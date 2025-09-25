@@ -10,7 +10,7 @@
 	/**
 	 * Parse bulk URLs from textarea
 	 * @param {string} text - Raw text input
-	 * @returns {Array<{url: string, title: string}>} Parsed URLs
+	 * @returns {Array<{url: string, title: string, category: string}>} Parsed URLs
 	 */
 	function parseUrls(text) {
 		const lines = text.split('\n').filter(line => line.trim());
@@ -20,22 +20,34 @@
 			const trimmed = line.trim();
 			if (!trimmed) continue;
 			
-			// Try to extract URL and title
-			const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/);
-			if (urlMatch) {
-				const url = urlMatch[1];
-				// Use the rest of the line as title, or extract from URL
-				let title = trimmed.replace(url, '').trim();
-				if (!title) {
-					// Extract title from URL
-					try {
-						const urlObj = new URL(url);
-						title = urlObj.hostname + urlObj.pathname;
-					} catch {
-						title = url;
-					}
+			// Check if line contains commas (CSV format)
+			if (trimmed.includes(',')) {
+				const parts = trimmed.split(',').map(part => part.trim());
+				if (parts.length >= 1 && parts[0].match(/https?:\/\//)) {
+					urls.push({
+						url: parts[0],
+						title: parts[1] || '',
+						category: parts[2] || ''
+					});
 				}
-				urls.push({ url, title });
+			} else {
+				// Try to extract URL and title (legacy format)
+				const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/);
+				if (urlMatch) {
+					const url = urlMatch[1];
+					// Use the rest of the line as title
+					let title = trimmed.replace(url, '').trim();
+					if (!title) {
+						// Extract title from URL
+						try {
+							const urlObj = new URL(url);
+							title = urlObj.hostname + urlObj.pathname;
+						} catch {
+							title = url;
+						}
+					}
+					urls.push({ url, title, category: '' });
+				}
 			}
 		}
 		
@@ -113,15 +125,16 @@
 					Bulk URL Input
 				</label>
 				<p class="text-sm text-gray-500 mb-3">
-					Paste URLs one per line. You can include titles after the URL, or we'll extract them automatically.
+					Paste URLs one per line. Supports multiple formats including comma-separated values.
 				</p>
 				<textarea
 					id="bulk-urls"
 					bind:value={bulkUrls}
-					placeholder="https://example.com My Example Site
-https://github.com/user/repo Cool GitHub Project
-https://news.ycombinator.com"
-					rows="10"
+					placeholder="https://example.com, My Example Site, technology
+https://github.com/user/repo, Cool GitHub Project, programming
+https://news.ycombinator.com
+https://dribbble.com My Design Site"
+					rows="12"
 					class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
 					disabled={isSubmitting}
 				></textarea>
@@ -154,10 +167,14 @@ https://news.ycombinator.com"
 		<div class="mt-8 p-4 bg-gray-50 rounded-lg">
 			<h3 class="font-semibold text-gray-800 mb-2">Supported Formats:</h3>
 			<ul class="text-sm text-gray-600 space-y-1">
-				<li>• <code>https://example.com</code> (URL only)</li>
-				<li>• <code>https://example.com My Site Title</code> (URL + title)</li>
-				<li>• <code>My Site Title https://example.com</code> (title + URL)</li>
+				<li>• <code>https://example.com, My Site Title, technology</code> (CSV: URL, title, category)</li>
+				<li>• <code>https://example.com, My Site Title</code> (CSV: URL, title - auto-categorized)</li>
+				<li>• <code>https://example.com</code> (URL only - auto-title and auto-categorized)</li>
+				<li>• <code>https://example.com My Site Title</code> (URL + title - auto-categorized)</li>
 			</ul>
+			<div class="mt-3 text-xs text-gray-500">
+				<strong>Categories:</strong> technology, programming, design, news, education, entertainment
+			</div>
 		</div>
 	</div>
 </div>

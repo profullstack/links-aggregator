@@ -111,18 +111,15 @@ export async function POST({ request }) {
 			try {
 				const urlObj = new URL(item.url);
 				
-				// Fetch metadata if title not provided
-				let metadata = { title: '', description: '', image: '', siteName: '' };
-				if (!item.title) {
-					metadata = await fetchUrlMetadata(item.url);
-				}
+				// Always fetch metadata for comprehensive analysis
+				const metadata = await fetchUrlMetadata(item.url);
 
 				const title = (item.title || metadata.title || urlObj.hostname).substring(0, 255);
 				const description = (item.description || metadata.description || '').substring(0, 1000);
 				const domain = urlObj.hostname;
 
-				// Detect category based on content (focus on title and description, not domain)
-				const suggestedCategory = detectCategory(title, description, '');
+				// Use detected category from metadata (guaranteed to return a valid category)
+				const suggestedCategory = metadata.category;
 
 				const linkData = {
 					url: item.url,
