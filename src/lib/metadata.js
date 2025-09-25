@@ -1,15 +1,29 @@
 /**
- * Fetch metadata from a URL with full HTML analysis
+ * Fetch metadata from a URL with full HTML analysis and Tor support
  * @param {string} url - The URL to fetch metadata from
  * @returns {Promise<{title: string, description: string, image: string, siteName: string, fullText: string, category: string}>}
  */
 export async function fetchUrlMetadata(url) {
 	try {
-		const response = await fetch(url, {
+		// Configure fetch options for Tor support
+		const fetchOptions = {
 			headers: {
 				'User-Agent': 'Mozilla/5.0 (compatible; LinksAggregator/1.0)'
-			}
-		});
+			},
+			timeout: 15000 // 15 second timeout for onion sites
+		};
+
+		// If it's an onion URL, use Tor SOCKS proxy
+		if (url.includes('.onion')) {
+			// Import SocksProxyAgent for onion URLs
+			const { SocksProxyAgent } = await import('socks-proxy-agent');
+			
+			// Use local Tor SOCKS proxy (running on port 9050 by default)
+			const agent = new SocksProxyAgent('socks5://127.0.0.1:9050');
+			fetchOptions.agent = agent;
+		}
+
+		const response = await fetch(url, fetchOptions);
 
 		if (!response.ok) {
 			throw new Error(`HTTP ${response.status}`);
