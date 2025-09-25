@@ -175,6 +175,46 @@ function getDomainFromUrl(url) {
 }
 
 /**
+ * Extract title from content when meta tags are missing
+ * @param {string} html - HTML content
+ * @returns {string|null} Extracted title
+ */
+function extractTitleFromContent(html) {
+	// Try h1 tags first
+	const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+	if (h1Match && h1Match[1]) {
+		return h1Match[1].trim();
+	}
+	
+	// Try first heading tag
+	const headingMatch = html.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i);
+	if (headingMatch && headingMatch[1]) {
+		return headingMatch[1].trim();
+	}
+	
+	return null;
+}
+
+/**
+ * Extract description from content when meta tags are missing
+ * @param {string} bodyText - Body text content
+ * @returns {string} Extracted description
+ */
+function extractDescriptionFromContent(bodyText) {
+	if (!bodyText) return '';
+	
+	// Get first paragraph or first 200 characters
+	const sentences = bodyText.split(/[.!?]+/);
+	const firstSentence = sentences[0]?.trim();
+	
+	if (firstSentence && firstSentence.length > 20) {
+		return firstSentence.substring(0, 200);
+	}
+	
+	return bodyText.substring(0, 200);
+}
+
+/**
  * Extract body text from HTML for content analysis
  * @param {string} html - HTML content
  * @returns {string} Extracted text content
@@ -199,6 +239,12 @@ function extractBodyText(html) {
 			bodyText = match[1];
 			break;
 		}
+	}
+	
+	// If no specific content area found, use body
+	if (!bodyText) {
+		const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+		bodyText = bodyMatch ? bodyMatch[1] : html;
 	}
 	
 	// Remove HTML tags and clean up
