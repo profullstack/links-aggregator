@@ -146,11 +146,13 @@ The container will:
 1. Deploy your project to Railway first
 2. **Right-click on your service card** in Railway dashboard
 3. **Select "Add Volume"**
-4. **Mount Path**: `/var/lib/tor`
+4. **Mount Path**: `/var/lib/tor` (only field needed)
 5. **Save** the volume
 6. **Redeploy** to activate the volume
 
 **Alternative**: Run the setup script for guidance: `bash scripts/setup-railway.sh`
+
+**Note**: The volume ensures your `.onion` address stays the same across deployments.
 
 The deployment will automatically:
 - Build using the Dockerfile

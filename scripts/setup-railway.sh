@@ -22,14 +22,16 @@ echo "📦 Setting up Railway project..."
 railway link || railway init
 
 # Volume configuration
-echo "💾 Volume configuration for Tor keys..."
-echo "✅ Volume is configured in railway.toml:"
-echo "   [[deploy.volumes]]"
-echo "   name = \"tor-keys\""
-echo "   mountPath = \"/var/lib/tor\""
+echo "💾 Setting up volume for persistent Tor keys..."
+echo "📋 To create volume in Railway dashboard:"
+echo "   1. Deploy your project first"
+echo "   2. Right-click on your service card"
+echo "   3. Select 'Add Volume'"
+echo "   4. Mount Path: /var/lib/tor"
+echo "   5. Save the volume"
+echo "   6. Redeploy to activate"
 echo ""
-echo "📋 Railway will automatically create the volume on deployment"
-echo "⚠️  If volume doesn't persist, check Railway plan supports volumes"
+echo "⚠️  This is CRITICAL for persistent .onion addresses!"
 echo "💡 The debug output in logs will show if volume is working"
 
 # Set environment variables
