@@ -180,13 +180,19 @@ function getDomainFromUrl(url) {
  * @returns {string|null} Extracted title
  */
 function extractTitleFromContent(html) {
-	// Try h1 tags first
+	// Try <title> tag first
+	const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+	if (titleMatch && titleMatch[1]) {
+		return titleMatch[1].trim();
+	}
+	
+	// Fallback to h1 tags
 	const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
 	if (h1Match && h1Match[1]) {
 		return h1Match[1].trim();
 	}
 	
-	// Try first heading tag
+	// Fallback to any heading tag
 	const headingMatch = html.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i);
 	if (headingMatch && headingMatch[1]) {
 		return headingMatch[1].trim();
