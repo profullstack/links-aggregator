@@ -22,11 +22,34 @@ ls -la /var/lib/tor/hidden_service/ || echo "Hidden service directory is empty (
 echo "=========================================="
 
 # Start Tor in the background
-echo "Starting Tor..."
+echo "Starting Tor with SOCKS proxy..."
 tor -f /etc/tor/torrc &
+TOR_PID=$!
 
-# Wait for Tor to initialize
-sleep 10
+# Wait for Tor to initialize and check SOCKS proxy
+echo "Waiting for Tor SOCKS proxy to be ready..."
+for i in {1..30}; do
+    if nc -z 127.0.0.1 9050; then
+        echo "✅ Tor SOCKS proxy is ready on port 9050"
+        break
+    fi
+    echo "⏳ Waiting for Tor SOCKS proxy... ($i/30)"
+    sleep 2
+done
+
+# Verify SOCKS proxy is working
+if ! nc -z 127.0.0.1 9050; then
+    echo "❌ ERROR: Tor SOCKS proxy failed to start on port 9050"
+    echo "🔍 Checking Tor process..."
+    ps aux | grep tor
+    echo "🔍 Checking Tor logs..."
+    tail -20 /var/log/tor/notices.log || echo "No Tor logs found"
+else
+    echo "✅ Tor SOCKS proxy confirmed working on 127.0.0.1:9050"
+fi
+
+# Wait a bit more for hidden service
+sleep 5
 
 # Get the onion address and inject it into the app
 echo "=========================================="

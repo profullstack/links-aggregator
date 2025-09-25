@@ -13,14 +13,27 @@ export async function fetchUrlMetadata(url) {
 			timeout: 15000 // 15 second timeout for onion sites
 		};
 
-		// If it's an onion URL, use Tor SOCKS proxy
+		// If it's an onion URL, try to use Tor SOCKS proxy
 		if (url.includes('.onion')) {
-			// Import SocksProxyAgent for onion URLs
-			const { SocksProxyAgent } = await import('socks-proxy-agent');
-			
-			// Use local Tor SOCKS proxy (running on port 9050 by default)
-			const agent = new SocksProxyAgent('socks5://127.0.0.1:9050');
-			fetchOptions.agent = agent;
+			try {
+				// Import SocksProxyAgent for onion URLs
+				const { SocksProxyAgent } = await import('socks-proxy-agent');
+				
+				// Use local Tor SOCKS proxy (running on port 9050 by default)
+				const agent = new SocksProxyAgent('socks5://127.0.0.1:9050');
+				fetchOptions.agent = agent;
+			} catch (proxyError) {
+				console.warn('Tor proxy not available, skipping onion URL:', url);
+				// Return fallback metadata for onion URLs when proxy unavailable
+				return {
+					title: getDomainFromUrl(url),
+					description: 'Onion URL (Tor proxy unavailable)',
+					image: '',
+					siteName: getDomainFromUrl(url),
+					fullText: '',
+					category: 'technology'
+				};
+			}
 		}
 
 		const response = await fetch(url, fetchOptions);

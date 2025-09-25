@@ -33,8 +33,8 @@ RUN pnpm run build
 # Production stage
 FROM node:20-alpine AS runner
 
-# Install pnpm and tor
-RUN apk add --no-cache tor && \
+# Install pnpm, tor, and netcat for proxy testing
+RUN apk add --no-cache tor netcat-openbsd && \
     npm install -g pnpm
 
 WORKDIR /app
