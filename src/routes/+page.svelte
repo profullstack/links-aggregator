@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getOnionUrl, isTorEnabled, getShareableUrl } from '$lib/tor.js';
 	import { goto } from '$app/navigation';
+	import VoteButtons from '$lib/components/VoteButtons.svelte';
 
 	let mounted = false;
 	let onionUrl = '';
@@ -124,26 +125,31 @@
 						{/if}
 						
 						{#if category.links && category.links.length > 0}
-							<div class="space-y-2">
+							<div class="space-y-3">
 								{#each category.links.slice(0, 5) as link}
 									<div class="flex items-start space-x-2">
 										{#if link.favicon_url}
-											<img 
-												src={link.favicon_url} 
-												alt="" 
+											<img
+												src={link.favicon_url}
+												alt=""
 												class="w-4 h-4 mt-0.5 flex-shrink-0"
 												loading="lazy"
 											/>
 										{/if}
-										<a 
-											href={link.url} 
-											target="_blank" 
-											rel="noopener noreferrer"
-											class="text-sm text-blue-600 hover:text-blue-800 hover:underline line-clamp-2"
-											title={link.description || link.title}
-										>
-											{link.title}
-										</a>
+										<div class="flex-1 min-w-0">
+											<a
+												href={link.url}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="text-sm text-blue-600 hover:text-blue-800 hover:underline line-clamp-2 block"
+												title={link.description || link.title}
+											>
+												{link.title}
+											</a>
+											<div class="flex items-center justify-between mt-1">
+												<VoteButtons linkId={link.id} initialScore={link.vote_count} size="small" />
+											</div>
+										</div>
 									</div>
 								{/each}
 								
