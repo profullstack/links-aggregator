@@ -5,26 +5,33 @@
  */
 export async function fetchUrlMetadata(url) {
 	try {
-		// Configure fetch options for Tor support
-		const fetchOptions = {
-			headers: {
-				'User-Agent': 'Mozilla/5.0 (compatible; LinksAggregator/1.0)'
-			},
-			timeout: 15000 // 15 second timeout for onion sites
-		};
+		let response;
 
-		// If it's an onion URL, try to use Tor SOCKS proxy
+		// If it's an onion URL, use node-fetch with SOCKS proxy
 		if (url.includes('.onion')) {
 			try {
-				// Import SocksProxyAgent for onion URLs
+				// Import node-fetch and SOCKS proxy agent
+				const fetch = (await import('node-fetch')).default;
 				const { SocksProxyAgent } = await import('socks-proxy-agent');
 				
-				// Use local Tor SOCKS proxy (running on port 9050 by default)
-				const agent = new SocksProxyAgent('socks5://127.0.0.1:9050');
-				fetchOptions.agent = agent;
+				// Create SOCKS proxy agent with socks5h:// for DNS leak prevention
+				const agent = new SocksProxyAgent('socks5h://127.0.0.1:9050');
+				
+				// Use node-fetch with SOCKS proxy
+				response = await fetch(url, {
+					agent,
+					timeout: 15000,
+					headers: {
+						'User-Agent': 'Mozilla/5.0 (compatible; LinksAggregator/1.0)'
+					}
+				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP ${response.status}`);
+				}
 			} catch (proxyError) {
-				console.warn('Tor proxy not available, skipping onion URL:', url);
-				// Return fallback metadata for onion URLs when proxy unavailable
+				console.warn('Tor proxy error for onion URL:', url, proxyError.message);
+				// Return fallback metadata for onion URLs when proxy fails
 				return {
 					title: getDomainFromUrl(url),
 					description: 'Onion URL (Tor proxy unavailable)',
@@ -34,9 +41,15 @@ export async function fetchUrlMetadata(url) {
 					category: 'technology'
 				};
 			}
+		} else {
+			// Regular clearnet fetch using global fetch
+			response = await fetch(url, {
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (compatible; LinksAggregator/1.0)'
+				},
+				signal: AbortSignal.timeout(10000)
+			});
 		}
-
-		const response = await fetch(url, fetchOptions);
 
 		if (!response.ok) {
 			throw new Error(`HTTP ${response.status}`);
