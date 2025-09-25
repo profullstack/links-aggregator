@@ -137,6 +137,8 @@ The container will:
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SUPABASE_DB_PASSWORD`
    - `SUPABASE_JWT_SECRET`
+
+   **Note**: These environment variables are required during both build and runtime for the Docker container.
 3. Deploy using the included `railway.json` configuration
 
 The deployment will automatically:
