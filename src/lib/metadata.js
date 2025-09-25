@@ -313,9 +313,7 @@ export function detectCategory(title, description, bodyText) {
 		scores[category] = 0;
 		for (const keyword of keywords) {
 			if (content.includes(keyword)) {
-				// Weight domain matches higher
-				const weight = domain.includes(keyword) ? 3 : 1;
-				scores[category] += weight;
+				scores[category] += 1;
 			}
 		}
 	}
