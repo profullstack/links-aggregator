@@ -1,0 +1,12 @@
+# Tor configuration for hidden service
+SocksPort 0
+HiddenServiceDir /var/lib/tor/hidden_service/
+HiddenServicePort 80 127.0.0.1:3000
+
+# Security settings
+DataDirectory /var/lib/tor
+RunAsDaemon 1
+User tor
+
+# Logging
+Log notice file /var/log/tor/notices.log
