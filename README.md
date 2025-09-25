@@ -139,7 +139,7 @@ The container will:
    - `SUPABASE_JWT_SECRET`
 
    **Note**: These environment variables are required during both build and runtime for the Docker container.
-3. Deploy using the included `railway.json` configuration
+3. Deploy using the included `railway.toml` configuration
 
 The deployment will automatically:
 - Build using the Dockerfile
@@ -150,10 +150,14 @@ The deployment will automatically:
 
 The Railway deployment includes a persistent volume (`tor-keys`) mounted at `/var/lib/tor` to preserve Tor hidden service keys between deployments. This ensures your `.onion` address remains consistent across redeploys.
 
-**Volume Details:**
-- **Name**: `tor-keys`
-- **Mount Path**: `/var/lib/tor`
-- **Purpose**: Persist Tor hidden service private keys and hostname
+**Volume Details (railway.toml):**
+```toml
+[[deploy.volumes]]
+name = "tor-keys"
+mountPath = "/var/lib/tor"
+```
+
+**Purpose**: Persist Tor hidden service private keys and hostname across deployments
 
 ## Project Structure
 
