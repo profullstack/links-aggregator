@@ -1,11 +1,25 @@
 #!/bin/sh
 
+# Debug volume mounting
+echo "=========================================="
+echo "🔍 VOLUME DEBUGGING"
+echo "=========================================="
+echo "Checking /var/lib/tor directory..."
+ls -la /var/lib/tor/ || echo "Directory doesn't exist yet"
+echo "Checking for existing hidden service..."
+ls -la /var/lib/tor/hidden_service/ || echo "Hidden service directory doesn't exist yet"
+
 # Ensure proper ownership of Tor directories
 echo "Setting up Tor directories..."
 mkdir -p /var/lib/tor/hidden_service
 chown -R tor:tor /var/lib/tor
 chmod 700 /var/lib/tor
 chmod 700 /var/lib/tor/hidden_service
+
+echo "After setup:"
+ls -la /var/lib/tor/
+ls -la /var/lib/tor/hidden_service/ || echo "Hidden service directory is empty (expected for first run)"
+echo "=========================================="
 
 # Start Tor in the background
 echo "Starting Tor..."
