@@ -42,7 +42,7 @@ RUN mkdir -p /var/lib/tor/hidden_service && \
     chown -R tor:tor /var/lib/tor
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # Start script
 COPY docker/start.sh /start.sh

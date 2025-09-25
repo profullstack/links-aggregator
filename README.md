@@ -45,20 +45,26 @@ A modern links aggregator built with SvelteKit 5, Skeleton UI, and Supabase, des
 
 4. Update `.env` with your Supabase credentials:
    ```env
+   # Client-side (PUBLIC_ prefix for browser exposure)
    PUBLIC_SUPABASE_URL=your_supabase_project_url
    PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   
+   # Server-side (Private - no PUBLIC_ prefix)
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   SUPABASE_DB_PASSWORD=your_supabase_db_password
+   SUPABASE_JWT_SECRET=your_supabase_jwt_secret
    ```
 
 ### Development Commands
 
 ```bash
-# Start development server
+# Start development server (runs on http://localhost:8080)
 pnpm dev
 
 # Build for production
 pnpm build
 
-# Preview production build
+# Preview production build (runs on http://localhost:8080)
 pnpm preview
 
 # Run tests
@@ -93,8 +99,12 @@ pnpm format
 ### Production Setup
 
 1. Create a new Supabase project
-2. Update environment variables with your project credentials
-3. Run migrations:
+2. Link your local project to Supabase:
+   ```bash
+   pnpx supabase link
+   ```
+3. Update environment variables with your project credentials
+4. Push migrations to your Supabase project:
    ```bash
    pnpx supabase db push
    ```
@@ -110,13 +120,13 @@ docker build -t links-aggregator .
 ### Running with Tor
 
 ```bash
-docker run -p 3000:3000 links-aggregator
+docker run -p 8080:8080 links-aggregator
 ```
 
 The container will:
 - Start Tor with hidden service configuration
 - Display the `.onion` address in logs
-- Serve the application on port 3000
+- Serve the application on port 8080
 
 ## Railway Deployment
 
@@ -124,12 +134,24 @@ The container will:
 2. Set environment variables in Railway dashboard:
    - `PUBLIC_SUPABASE_URL`
    - `PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_DB_PASSWORD`
+   - `SUPABASE_JWT_SECRET`
 3. Deploy using the included `railway.json` configuration
 
 The deployment will automatically:
 - Build using the Dockerfile
-- Configure Tor hidden service
+- Configure Tor hidden service with persistent volume for keys
 - Start the application
+
+### Volume Configuration
+
+The Railway deployment includes a persistent volume (`tor-keys`) mounted at `/var/lib/tor` to preserve Tor hidden service keys between deployments. This ensures your `.onion` address remains consistent across redeploys.
+
+**Volume Details:**
+- **Name**: `tor-keys`
+- **Mount Path**: `/var/lib/tor`
+- **Purpose**: Persist Tor hidden service private keys and hostname
 
 ## Project Structure
 
