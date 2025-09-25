@@ -20,50 +20,17 @@ export async function POST({ request, getClientAddress }) {
 		const clientIP = getClientAddress();
 		const sessionId = `anon_${Buffer.from(clientIP + (fingerprint || '')).toString('base64').substring(0, 16)}`;
 
-		// Check if session already voted on this link
-		const { data: existingVote } = await supabase
-			.from('votes')
-			.select('*')
-			.eq('link_id', linkId)
-			.eq('session_id', sessionId)
-			.single();
+		// For now, allow multiple votes per link (until migration is applied)
+		// This is a temporary fix until the session_id column is added
+		const existingVote = null;
 
-		if (existingVote) {
-			if (voteType === null) {
-				// Remove vote
-				const { error } = await supabase
-					.from('votes')
-					.delete()
-					.eq('id', existingVote.id);
-
-				if (error) {
-					console.error('Vote delete error:', error);
-					return json({ error: error.message }, { status: 500 });
-				}
-
-				return json({ message: 'Vote removed successfully' });
-			} else {
-				// Update existing vote
-				const { error } = await supabase
-					.from('votes')
-					.update({ vote_type: voteType })
-					.eq('id', existingVote.id);
-
-				if (error) {
-					console.error('Vote update error:', error);
-					return json({ error: error.message }, { status: 500 });
-				}
-
-				return json({ message: 'Vote updated successfully' });
-			}
-		} else if (voteType !== null) {
-			// Create new vote
+		if (voteType !== null) {
+			// Create new vote (temporary: without session_id until migration applied)
 			const { error } = await supabase
 				.from('votes')
 				.insert({
 					link_id: linkId,
 					user_id: null,
-					session_id: sessionId,
 					vote_type: voteType
 				});
 
@@ -96,13 +63,8 @@ export async function GET({ url, getClientAddress }) {
 		const clientIP = getClientAddress();
 		const sessionId = `anon_${Buffer.from(clientIP + (fingerprint || '')).toString('base64').substring(0, 16)}`;
 
-		// Get session's vote for this link
-		const { data: userVote } = await supabase
-			.from('votes')
-			.select('vote_type')
-			.eq('link_id', linkId)
-			.eq('session_id', sessionId)
-			.single();
+		// For now, return no user vote (until migration is applied)
+		const userVote = null;
 
 		// Get vote counts for this link
 		const { data: voteCounts } = await supabase
@@ -115,7 +77,7 @@ export async function GET({ url, getClientAddress }) {
 		const totalScore = upvotes - downvotes;
 
 		return json({
-			userVote: userVote?.vote_type || null,
+			userVote: null, // Temporary: no user vote tracking until migration applied
 			upvotes,
 			downvotes,
 			totalScore
