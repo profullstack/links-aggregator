@@ -2,10 +2,56 @@ import { json } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
-import { fetchUrlMetadata } from '$lib/metadata.js';
+import { fetchUrlMetadata, detectCategory } from '$lib/metadata.js';
 
 // Create server-side Supabase client with service role
 const supabase = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+/**
+ * Assign categories to links based on detected categories
+ * @param {Array} insertedLinks - Links that were successfully inserted
+ * @param {Array} validUrls - Original URL data with suggested categories
+ */
+async function assignCategoriesToLinks(insertedLinks, validUrls) {
+	try {
+		// Get all categories
+		const { data: categories } = await supabase
+			.from('categories')
+			.select('id, name');
+
+		if (!categories) return;
+
+		const categoryMap = {};
+		categories.forEach(cat => {
+			categoryMap[cat.name.toLowerCase()] = cat.id;
+		});
+
+		// Create link-category associations
+		const linkCategories = [];
+		
+		for (const link of insertedLinks) {
+			const originalData = validUrls.find(v => v.url === link.url);
+			if (originalData?.suggestedCategory) {
+				const categoryId = categoryMap[originalData.suggestedCategory];
+				if (categoryId) {
+					linkCategories.push({
+						link_id: link.id,
+						category_id: categoryId
+					});
+				}
+			}
+		}
+
+		// Insert link-category relationships
+		if (linkCategories.length > 0) {
+			await supabase
+				.from('link_categories')
+				.upsert(linkCategories, { onConflict: 'link_id,category_id' });
+		}
+	} catch (err) {
+		console.error('Error assigning categories:', err);
+	}
+}
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ url }) {
@@ -66,22 +112,30 @@ export async function POST({ request }) {
 				const urlObj = new URL(item.url);
 				
 				// Fetch metadata if title not provided
-				let metadata = {};
+				let metadata = { title: '', description: '', image: '', siteName: '' };
 				if (!item.title) {
 					metadata = await fetchUrlMetadata(item.url);
 				}
 
+				const title = (item.title || metadata.title || urlObj.hostname).substring(0, 255);
+				const description = (item.description || metadata.description || '').substring(0, 1000);
+				const domain = urlObj.hostname;
+
+				// Detect category based on content (focus on title and description, not domain)
+				const suggestedCategory = detectCategory(title, description, '');
+
 				const linkData = {
 					url: item.url,
-					title: (item.title || metadata.title || urlObj.hostname).substring(0, 255),
-					description: (item.description || metadata.description || '').substring(0, 1000),
+					title,
+					description,
 					image_url: metadata.image || null,
-					site_name: metadata.siteName || urlObj.hostname,
-					domain: urlObj.hostname,
-					favicon_url: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}`,
+					site_name: metadata.siteName || domain,
+					domain,
+					favicon_url: `https://www.google.com/s2/favicons?domain=${domain}`,
 					tags: item.tags || [],
 					is_public: true,
-					user_id: null // Anonymous for now
+					user_id: null, // Anonymous for now
+					suggestedCategory
 				};
 
 				validUrls.push(linkData);
@@ -96,10 +150,12 @@ export async function POST({ request }) {
 			return json({ error: 'No valid URLs provided' }, { status: 400 });
 		}
 
-		// Insert with ON CONFLICT DO NOTHING to handle duplicates
-		const { data, error } = await supabase
+		// Insert links with ON CONFLICT DO NOTHING to handle duplicates
+		const linksToInsert = validUrls.map(({ suggestedCategory, ...link }) => link);
+		
+		const { data: insertedLinks, error } = await supabase
 			.from('links')
-			.upsert(validUrls, {
+			.upsert(linksToInsert, {
 				onConflict: 'url',
 				ignoreDuplicates: true
 			})
@@ -110,9 +166,14 @@ export async function POST({ request }) {
 			return json({ error: error.message }, { status: 500 });
 		}
 
-		return json({ 
-			message: `Successfully added ${data.length} links`,
-			links: data 
+		// Auto-assign categories for successfully inserted links
+		if (insertedLinks && insertedLinks.length > 0) {
+			await assignCategoriesToLinks(insertedLinks, validUrls);
+		}
+
+		return json({
+			message: `Successfully processed ${validUrls.length} links (${insertedLinks?.length || 0} new)`,
+			links: insertedLinks
 		});
 	} catch (err) {
 		console.error('API error:', err);
