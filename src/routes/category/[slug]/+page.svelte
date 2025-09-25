@@ -51,7 +51,7 @@
 			hasMore = true;
 		}
 
-		if (!hasMore) return;
+		if (!hasMore || !category) return;
 
 		const currentLoading = offset === 0 ? 'loading' : 'loadingMore';
 		if (currentLoading === 'loading') {
@@ -61,8 +61,9 @@
 		}
 
 		try {
+			// Use the actual category name, not the slug
 			const response = await fetch(
-				`/api/links?limit=${limit}&offset=${offset}&category=${categorySlug}`
+				`/api/links?limit=${limit}&offset=${offset}&category=${category.name}`
 			);
 			const result = await response.json();
 

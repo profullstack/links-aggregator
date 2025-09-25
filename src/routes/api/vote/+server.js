@@ -16,16 +16,16 @@ export async function POST({ request, getClientAddress }) {
 			return json({ error: 'Invalid vote data' }, { status: 400 });
 		}
 
-		// Create anonymous voter ID from IP + fingerprint
+		// Create session ID from IP + fingerprint for anonymous voting
 		const clientIP = getClientAddress();
-		const voterId = `anon_${Buffer.from(clientIP + (fingerprint || '')).toString('base64').substring(0, 16)}`;
+		const sessionId = `anon_${Buffer.from(clientIP + (fingerprint || '')).toString('base64').substring(0, 16)}`;
 
-		// Check if user already voted on this link
+		// Check if session already voted on this link
 		const { data: existingVote } = await supabase
 			.from('votes')
 			.select('*')
 			.eq('link_id', linkId)
-			.eq('user_id', voterId)
+			.eq('session_id', sessionId)
 			.single();
 
 		if (existingVote) {
@@ -62,7 +62,8 @@ export async function POST({ request, getClientAddress }) {
 				.from('votes')
 				.insert({
 					link_id: linkId,
-					user_id: voterId,
+					user_id: null,
+					session_id: sessionId,
 					vote_type: voteType
 				});
 
@@ -91,16 +92,16 @@ export async function GET({ url, getClientAddress }) {
 			return json({ error: 'Link ID required' }, { status: 400 });
 		}
 
-		// Create anonymous voter ID from IP + fingerprint
+		// Create session ID from IP + fingerprint for anonymous voting
 		const clientIP = getClientAddress();
-		const voterId = `anon_${Buffer.from(clientIP + (fingerprint || '')).toString('base64').substring(0, 16)}`;
+		const sessionId = `anon_${Buffer.from(clientIP + (fingerprint || '')).toString('base64').substring(0, 16)}`;
 
-		// Get user's vote for this link
+		// Get session's vote for this link
 		const { data: userVote } = await supabase
 			.from('votes')
 			.select('vote_type')
 			.eq('link_id', linkId)
-			.eq('user_id', voterId)
+			.eq('session_id', sessionId)
 			.single();
 
 		// Get vote counts for this link
