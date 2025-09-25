@@ -61,17 +61,38 @@ export async function GET({ url }) {
 		const category = url.searchParams.get('category');
 
 		if (category) {
-			// Filter by specific category using INNER JOIN
+			// First, find the category ID by name (case-insensitive)
+			const { data: categoryData } = await supabase
+				.from('categories')
+				.select('id, name')
+				.ilike('name', category)
+				.single();
+
+			if (!categoryData) {
+				return json({ links: [] }); // No category found
+			}
+
+			// Then get links for that category
 			const { data, error } = await supabase
-				.from('links')
+				.from('link_categories')
 				.select(`
-					*,
-					link_categories!inner(
-						categories!inner(name)
+					links:link_id (
+						id,
+						title,
+						url,
+						description,
+						image_url,
+						site_name,
+						domain,
+						favicon_url,
+						vote_count,
+						created_at,
+						updated_at,
+						is_public,
+						tags
 					)
 				`)
-				.eq('is_public', true)
-				.eq('link_categories.categories.name', category.toLowerCase())
+				.eq('category_id', categoryData.id)
 				.order('created_at', { ascending: false })
 				.range(offset, offset + limit - 1);
 
@@ -80,7 +101,12 @@ export async function GET({ url }) {
 				return json({ error: error.message }, { status: 500 });
 			}
 
-			return json({ links: data || [] });
+			// Extract links from the nested structure and filter public ones
+			const links = (data || [])
+				.map(item => item.links)
+				.filter(link => link && link.is_public);
+
+			return json({ links });
 		} else {
 			// Get all links without category filtering
 			const { data, error } = await supabase
