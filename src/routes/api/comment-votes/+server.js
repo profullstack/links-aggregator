@@ -56,6 +56,8 @@ export async function POST({ request, getClientAddress }) {
 					comment_id: commentId,
 					voter_ip: clientIP,
 					vote_type: voteType
+				}, {
+					onConflict: 'comment_id,voter_ip'
 				});
 
 			if (error) {
