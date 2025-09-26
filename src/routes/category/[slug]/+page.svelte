@@ -180,19 +180,48 @@
 							{/if}
 							
 							<div class="flex-1 min-w-0">
-								<h3 class="text-lg font-semibold text-gray-900 mb-2">
-									<a
-										href={link.url}
-										target="_blank"
-										rel="noopener noreferrer"
-										class="hover:text-blue-600 transition-colors"
-									>
-										{link.title || link.description || link.url}
-									</a>
-								</h3>
+								<div class="flex items-start justify-between mb-2">
+									<h3 class="text-lg font-semibold text-gray-900 flex-1">
+										<a
+											href={link.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="hover:text-blue-600 transition-colors"
+										>
+											{link.title || link.description || link.url}
+										</a>
+									</h3>
+									<!-- Link Status Indicator -->
+									{#if link.status}
+										<span
+											class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2"
+											class:bg-green-100={link.status === 'live'}
+											class:text-green-800={link.status === 'live'}
+											class:bg-red-100={link.status === 'dead'}
+											class:text-red-800={link.status === 'dead'}
+											class:bg-gray-100={link.status === 'unknown'}
+											class:text-gray-800={link.status === 'unknown'}
+											title="Link status: {link.status} {link.last_checked_at ? `(checked ${new Date(link.last_checked_at).toLocaleDateString()})` : ''}"
+										>
+											{#if link.status === 'live'}
+												✓ Live
+											{:else if link.status === 'dead'}
+												✗ Dead
+											{:else}
+												? Unknown
+											{/if}
+										</span>
+									{/if}
+								</div>
 								
 								{#if link.description && link.title !== link.description}
 									<p class="text-gray-600 mb-3 line-clamp-2">{link.description}</p>
+								{/if}
+								
+								{#if link.last_verified_at}
+									<p class="text-xs text-green-600 mb-2" title="Last verified: {new Date(link.last_verified_at).toLocaleString()}">
+										✓ Last verified: {new Date(link.last_verified_at).toLocaleDateString()}
+									</p>
 								{/if}
 								
 								<div class="flex items-center justify-between text-sm text-gray-500">
