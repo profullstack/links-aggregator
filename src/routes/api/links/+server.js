@@ -59,6 +59,7 @@ export async function GET({ url }) {
 		const limit = parseInt(url.searchParams.get('limit') || '10');
 		const offset = parseInt(url.searchParams.get('offset') || '0');
 		const category = url.searchParams.get('category');
+		const sortBy = url.searchParams.get('sort') || 'latest'; // 'latest' or 'votes'
 
 		if (category) {
 			console.log('Filtering by category:', category);
@@ -116,7 +117,7 @@ export async function GET({ url }) {
 			return json({ links });
 		} else {
 			// Get all links without category filtering, including category information
-			const { data, error } = await supabase
+			let query = supabase
 				.from('links')
 				.select(`
 					*,
@@ -128,9 +129,16 @@ export async function GET({ url }) {
 						)
 					)
 				`)
-				.eq('is_public', true)
-				.order('created_at', { ascending: false })
-				.range(offset, offset + limit - 1);
+				.eq('is_public', true);
+
+			// Apply sorting based on sortBy parameter
+			if (sortBy === 'votes') {
+				query = query.order('vote_count', { ascending: false });
+			} else {
+				query = query.order('created_at', { ascending: false });
+			}
+
+			const { data, error } = await query.range(offset, offset + limit - 1);
 
 			if (error) {
 				console.error('Links fetch error:', error);

@@ -7,17 +7,20 @@
 	let loading = true;
 	/** @type {string | null} */
 	let error = null;
+	let sortMode = 'latest'; // 'latest' or 'votes'
 
 	onMount(async () => {
 		await loadLatestLinks();
 	});
 
-	async function loadLatestLinks() {
+	async function loadLatestLinks(sort = 'latest') {
 		try {
 			loading = true;
 			error = null;
+			sortMode = sort;
 			
-			const response = await fetch('/api/links?limit=100');
+			const sortParam = sort === 'votes' ? '&sort=votes' : '';
+			const response = await fetch(`/api/links?limit=100${sortParam}`);
 			const result = await response.json();
 
 			if (!response.ok) {
@@ -31,6 +34,17 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	/**
+	 * @param {string} sort
+	 */
+	async function handleSortChange(sort) {
+		await loadLatestLinks(sort);
+	}
+
+	async function refreshLinks() {
+		await loadLatestLinks(sortMode);
 	}
 
 	/**
@@ -95,7 +109,7 @@
 			<h3 class="text-lg font-semibold text-red-800 mb-2">Error Loading Links</h3>
 			<p class="text-red-700 mb-4">{error}</p>
 			<button
-				on:click={loadLatestLinks}
+				on:click={refreshLinks}
 				class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
 			>
 				Try Again
@@ -122,14 +136,30 @@
 			<div class="px-6 py-4 border-b border-gray-200">
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-semibold text-gray-900">
-						{links.length} Latest Links
+						{links.length} {sortMode === 'votes' ? 'Highest Ranked' : 'Latest'} Links
 					</h2>
-					<button
-						on:click={loadLatestLinks}
-						class="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
-					>
-						Refresh
-					</button>
+					<div class="flex items-center space-x-3">
+						<button
+							on:click={() => handleSortChange('latest')}
+							class="text-sm font-medium transition-colors {sortMode === 'latest' ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}"
+						>
+							Latest
+						</button>
+						<span class="text-gray-300">|</span>
+						<button
+							on:click={() => handleSortChange('votes')}
+							class="text-sm font-medium transition-colors {sortMode === 'votes' ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}"
+						>
+							Highest Ranked
+						</button>
+						<span class="text-gray-300">|</span>
+						<button
+							on:click={refreshLinks}
+							class="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+						>
+							Refresh
+						</button>
+					</div>
 				</div>
 			</div>
 			
