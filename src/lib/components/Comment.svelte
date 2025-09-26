@@ -97,6 +97,26 @@
 		dispatch('reply-added', event.detail);
 	}
 
+	// Handle copying comment ID
+	async function copyCommentId() {
+		try {
+			await navigator.clipboard.writeText(comment.id);
+			// Brief visual feedback
+			const button = document.querySelector(`[data-comment-id="${comment.id}"]`);
+			if (button) {
+				const originalText = button.innerHTML;
+				button.innerHTML = '✓';
+				button.classList.add('text-green-500');
+				setTimeout(() => {
+					button.innerHTML = originalText;
+					button.classList.remove('text-green-500');
+				}, 1000);
+			}
+		} catch (err) {
+			console.error('Failed to copy comment ID:', err);
+		}
+	}
+
 	// Calculate indentation based on depth (max 6 levels)
 	$: indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 24)}` : '';
 	$: isDeepThread = depth >= 6;
