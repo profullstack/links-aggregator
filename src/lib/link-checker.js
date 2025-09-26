@@ -52,9 +52,15 @@ function createFetchOptions(url, options = {}) {
  */
 export async function checkLink(url, options = {}) {
   const checkedAt = new Date();
+  console.log(`🔗 [Link Checker] Checking URL: ${url}`);
   
   try {
     const fetchOptions = createFetchOptions(url, options);
+    
+    // Log if using Tor proxy for onion URLs
+    if (isOnionUrl(url)) {
+      console.log(`🧅 [Link Checker] Using Tor proxy for onion URL: ${url}`);
+    }
     
     // Create a timeout promise
     const timeoutPromise = new Promise((_, reject) => {
@@ -68,6 +74,7 @@ export async function checkLink(url, options = {}) {
     ]);
 
     if (response.ok) {
+      console.log(`✅ [Link Checker] URL is LIVE: ${url} (${response.status})`);
       return {
         url,
         status: 'live',
@@ -76,6 +83,7 @@ export async function checkLink(url, options = {}) {
         checkedAt
       };
     } else {
+      console.log(`❌ [Link Checker] URL is DEAD: ${url} (${response.status} ${response.statusText})`);
       return {
         url,
         status: 'dead',
@@ -85,6 +93,7 @@ export async function checkLink(url, options = {}) {
       };
     }
   } catch (error) {
+    console.log(`💥 [Link Checker] URL check FAILED: ${url} - ${error.message}`);
     return {
       url,
       status: 'dead',
@@ -130,6 +139,8 @@ export class LinkChecker {
    */
   async updateLinkStatus(linkId, checkResult) {
     try {
+      console.log(`📝 [Link Checker] Updating database for link ${linkId}: ${checkResult.status}`);
+      
       // Get current consecutive failures count
       const { data: currentLink, error: fetchError } = await this.supabase
         .from('links')
@@ -146,10 +157,13 @@ export class LinkChecker {
 
       if (checkResult.status === 'dead') {
         newConsecutiveFailures = currentFailures + 1;
+        console.log(`⚠️ [Link Checker] Link ${linkId} failed ${newConsecutiveFailures} times consecutively`);
       }
 
       // If we've reached max consecutive failures, delete the link
       if (newConsecutiveFailures >= this.options.maxConsecutiveFailures) {
+        console.log(`🗑️ [Link Checker] Deleting link ${linkId} after ${newConsecutiveFailures} consecutive failures`);
+        
         const { error: deleteError } = await this.supabase
           .from('links')
           .delete()
@@ -159,6 +173,7 @@ export class LinkChecker {
           throw new Error(`Failed to delete link: ${deleteError.message}`);
         }
 
+        console.log(`✅ [Link Checker] Successfully deleted link ${linkId}`);
         return { deleted: true };
       }
 
@@ -174,6 +189,7 @@ export class LinkChecker {
       // If the link is live, update the last_verified_at timestamp
       if (checkResult.status === 'live') {
         updateData.last_verified_at = checkResult.checkedAt.toISOString();
+        console.log(`🎉 [Link Checker] Link ${linkId} verified as live, updating last_verified_at`);
       }
 
       // Update link status
@@ -186,8 +202,10 @@ export class LinkChecker {
         throw new Error(`Failed to update link status: ${updateError.message}`);
       }
 
+      console.log(`✅ [Link Checker] Successfully updated link ${linkId} status in database`);
       return { deleted: false };
     } catch (error) {
+      console.error(`❌ [Link Checker] Failed to update link ${linkId}:`, error.message);
       throw new Error(`Failed to update link status: ${error.message}`);
     }
   }
@@ -209,8 +227,11 @@ export class LinkChecker {
       const links = await this.getLinksNeedingCheck();
       
       if (links.length === 0) {
+        console.log(`📊 [Link Checker] No links need checking at this time`);
         return results;
       }
+
+      console.log(`🚀 [Link Checker] Starting batch check of ${links.length} links`);
 
       // Process links concurrently but with limited concurrency
       const promises = links.map(async (link) => {
@@ -228,16 +249,17 @@ export class LinkChecker {
             results.dead++;
           }
         } catch (error) {
-          console.error(`Error checking link ${link.url}:`, error);
+          console.error(`💥 [Link Checker] Error checking link ${link.url}:`, error);
           results.errors++;
         }
       });
 
       await Promise.all(promises);
       
+      console.log(`📈 [Link Checker] Batch completed: ${results.checked} checked, ${results.live} live, ${results.dead} dead, ${results.deleted} deleted, ${results.errors} errors`);
       return results;
     } catch (error) {
-      console.error('Error in checkBatch:', error);
+      console.error('💥 [Link Checker] Error in checkBatch:', error);
       throw error;
     }
   }

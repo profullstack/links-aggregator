@@ -172,16 +172,22 @@ export class JobScheduler {
 export function createLinkCheckerScheduler(supabase) {
   const scheduler = new JobScheduler();
 
-  // Add link checker job that runs every 24 hours (daily)
+  // Get interval from environment variable (default to 15 minutes for testing)
+  const intervalMinutes = parseInt(process.env.LINK_CHECK_INTERVAL_MINUTES || '15') || 15;
+  const intervalMs = intervalMinutes * 60 * 1000;
+
+  console.log(`⏰ [Scheduler] Link checker will run every ${intervalMinutes} minutes`);
+
+  // Add link checker job
   scheduler.addJob(
     'link-checker',
     async () => {
-      console.log('Starting scheduled daily link check...');
+      console.log(`🕐 [Scheduler] Starting scheduled link check (every ${intervalMinutes} minutes)...`);
       const results = await checkAllLinks(supabase);
-      console.log('Scheduled daily link check completed:', results);
+      console.log('🎯 [Scheduler] Scheduled link check completed:', results);
       return results;
     },
-    24 * 60 * 60 * 1000 // 24 hours in milliseconds
+    intervalMs
   );
 
   return scheduler;
