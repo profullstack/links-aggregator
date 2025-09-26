@@ -174,21 +174,51 @@
 											/>
 										{/if}
 										<div class="flex-1 min-w-0">
-											<a
-												href={link.url}
-												target="_blank"
-												rel="noopener noreferrer"
-												class="text-sm text-blue-600 hover:text-blue-800 hover:underline line-clamp-2 block"
-												title={link.description || link.title || link.url}
-											>
-												{link.title || link.description || link.url}
-											</a>
+											<div class="flex items-start gap-2">
+												<a
+													href={link.url}
+													target="_blank"
+													rel="noopener noreferrer"
+													class="text-sm text-blue-600 hover:text-blue-800 hover:underline line-clamp-2 block flex-1"
+													title={link.description || link.title || link.url}
+												>
+													{link.title || link.description || link.url}
+												</a>
+												<!-- Link Status Indicator -->
+												{#if link.status}
+													<span
+														class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+														class:bg-green-100={link.status === 'live'}
+														class:text-green-800={link.status === 'live'}
+														class:bg-red-100={link.status === 'dead'}
+														class:text-red-800={link.status === 'dead'}
+														class:bg-gray-100={link.status === 'unknown'}
+														class:text-gray-800={link.status === 'unknown'}
+														title="Link status: {link.status} {link.last_checked_at ? `(checked ${new Date(link.last_checked_at).toLocaleDateString()})` : ''}"
+													>
+														{#if link.status === 'live'}
+															✓
+														{:else if link.status === 'dead'}
+															✗
+														{:else}
+															?
+														{/if}
+													</span>
+												{/if}
+											</div>
 											{#if link.description && link.title !== link.description}
 												<p class="text-xs text-gray-500 mt-1 line-clamp-1">{link.description}</p>
 											{/if}
 											<div class="flex items-center justify-between mt-1">
 												<VoteButtons linkId={link.id} initialScore={link.vote_count} size="small" />
-												<CopyButton url={link.url} size="small" className="ml-2" />
+												<div class="flex items-center gap-2">
+													{#if link.last_verified_at}
+														<span class="text-xs text-green-600" title="Last verified: {new Date(link.last_verified_at).toLocaleString()}">
+															Last verified: {new Date(link.last_verified_at).toLocaleDateString()}
+														</span>
+													{/if}
+													<CopyButton url={link.url} size="small" className="ml-2" />
+												</div>
 											</div>
 										</div>
 									</div>
