@@ -1,7 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import VoteButtons from '$lib/components/VoteButtons.svelte';
-	import CopyButton from '$lib/components/CopyButton.svelte';
+	import LinkCard from '$lib/components/LinkCard.svelte';
 
 	/** @type {Array<any>} */
 	let links = [];
@@ -164,91 +163,9 @@
 				</div>
 			</div>
 			
-			<div class="divide-y divide-gray-200">
+			<div class="space-y-4 p-6">
 				{#each links as link, index}
-					<div class="px-6 py-4 hover:bg-gray-50 transition-colors">
-						<div class="flex items-start space-x-4">
-							<!-- Favicon -->
-							<div class="flex-shrink-0 mt-1">
-								{#if link.favicon_url}
-									<img
-										src={link.favicon_url}
-										alt=""
-										class="w-4 h-4"
-										loading="lazy"
-									/>
-								{:else}
-									<div class="w-4 h-4 bg-gray-300 rounded-sm"></div>
-								{/if}
-							</div>
-							
-							<!-- Content -->
-							<div class="flex-1 min-w-0">
-								<div class="flex items-start justify-between">
-									<div class="flex-1 min-w-0">
-										<h3 class="text-lg font-medium text-gray-900 mb-1">
-											<a
-												href={link.url}
-												target="_blank"
-												rel="noopener noreferrer"
-												class="hover:text-blue-600 transition-colors"
-											>
-												{link.title || getDomainFromUrl(link.url)}
-											</a>
-										</h3>
-										
-										{#if link.description}
-											<p class="text-gray-600 text-sm mb-2 line-clamp-2">
-												{link.description}
-											</p>
-										{/if}
-										
-										<div class="flex items-center space-x-4 text-xs text-gray-500">
-											<span>{getDomainFromUrl(link.url)}</span>
-											<span>•</span>
-											<span>{formatDate(link.created_at)}</span>
-											{#if link.categories && link.categories.length > 0}
-												<span>•</span>
-												<div class="flex items-center space-x-1">
-													{#each link.categories.slice(0, 2) as category}
-														<a
-															href="/category/{category.name.toLowerCase()}"
-															class="bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-0.5 rounded text-xs font-medium transition-colors"
-															style="border-left: 3px solid {category.color}"
-														>
-															{category.name}
-														</a>
-													{/each}
-													{#if link.categories.length > 2}
-														<span class="text-gray-400">+{link.categories.length - 2}</span>
-													{/if}
-												</div>
-											{/if}
-											{#if link.tags && link.tags.length > 0}
-												<span>•</span>
-												<div class="flex items-center space-x-1">
-													{#each link.tags.slice(0, 3) as tag}
-														<span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
-															{tag}
-														</span>
-													{/each}
-													{#if link.tags.length > 3}
-														<span class="text-gray-400">+{link.tags.length - 3}</span>
-													{/if}
-												</div>
-											{/if}
-										</div>
-									</div>
-									
-									<!-- Vote buttons and copy button -->
-									<div class="flex-shrink-0 ml-4 flex items-center space-x-2">
-										<VoteButtons linkId={link.id} initialScore={link.vote_count} size="small" />
-										<CopyButton url={link.url} size="small" />
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
+					<LinkCard {link} showCategory={true} size="normal" />
 				{/each}
 			</div>
 		</div>

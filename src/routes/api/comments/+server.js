@@ -21,12 +21,11 @@ export async function GET({ url }) {
 			return json({ error: 'Link ID is required' }, { status: 400 });
 		}
 
-		// Fetch comments with threading structure
+		// Fetch comments with threading structure (include soft-deleted for thread preservation)
 		const { data: comments, error } = await supabase
 			.from('comments')
 			.select('*')
 			.eq('link_id', linkId)
-			.eq('is_deleted', false)
 			.order('created_at', { ascending: true })
 			.range(offset, offset + limit - 1);
 

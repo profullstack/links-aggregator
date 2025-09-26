@@ -7,9 +7,9 @@ import { config } from 'dotenv';
 config();
 
 /**
- * Parse command line arguments to extract URL
+ * Parse command line arguments to extract URL or comment ID
  * @param {string[]} argv - Command line arguments
- * @returns {string|null} - URL to delete or null if not provided
+ * @returns {string|null} - URL or comment ID to delete or null if not provided
  */
 export function parseArguments(argv) {
   const args = argv.slice(2); // Remove 'node' and script name
@@ -31,6 +31,110 @@ export function validateUrl(url) {
     return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
   } catch {
     return false;
+  }
+}
+
+/**
+ * Validate if the provided string is a valid UUID
+ * @param {string} id - ID to validate
+ * @returns {boolean} - True if valid UUID, false otherwise
+ */
+export function validateUuid(id) {
+  if (!id || typeof id !== 'string') {
+    return false;
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
+/**
+ * Determine if the input is a URL or a comment ID
+ * @param {string} input - Input string to analyze
+ * @returns {{type: 'url'|'comment_id', value: string}} - Type and value of input
+ */
+export function parseInputType(input) {
+  if (validateUrl(input)) {
+    return { type: 'url', value: input };
+  } else if (validateUuid(input)) {
+    return { type: 'comment_id', value: input };
+  } else {
+    throw new Error(`Invalid input: "${input}" is neither a valid URL nor a valid UUID`);
+  }
+}
+
+/**
+ * Soft-delete a comment by setting content and author_name to "[deleted]"
+ * @param {string} commentId - UUID of the comment to delete
+ * @param {object} supabase - Supabase client instance
+ * @returns {Promise<{success: boolean, message: string, deletedComment?: object}>}
+ */
+export async function deleteComment(commentId, supabase) {
+  try {
+    // First, find the comment by ID
+    const { data: commentData, error: findError } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('id', commentId)
+      .single();
+
+    if (findError) {
+      if (findError.code === 'PGRST116') {
+        return {
+          success: false,
+          message: `Comment with ID "${commentId}" not found in database.`
+        };
+      }
+      return {
+        success: false,
+        message: `Error finding comment: ${findError.message}`
+      };
+    }
+
+    if (!commentData) {
+      return {
+        success: false,
+        message: `Comment with ID "${commentId}" not found in database.`
+      };
+    }
+
+    // Check if comment is already deleted
+    if (commentData.is_deleted) {
+      return {
+        success: false,
+        message: `Comment with ID "${commentId}" is already deleted.`
+      };
+    }
+
+    // Soft-delete the comment by updating content and author_name
+    const { data: updatedData, error: updateError } = await supabase
+      .from('comments')
+      .update({
+        content: '[deleted]',
+        author_name: '[deleted]',
+        is_deleted: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', commentId)
+      .select();
+
+    if (updateError) {
+      return {
+        success: false,
+        message: `Error deleting comment: ${updateError.message}`
+      };
+    }
+
+    return {
+      success: true,
+      message: `Comment "${commentId}" successfully soft-deleted from database.`,
+      deletedComment: commentData
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Unexpected error: ${error.message}`
+    };
   }
 }
 
@@ -70,9 +174,63 @@ export async function deleteLink(url, supabase) {
     }
 
     const linkId = linkData.id;
-    const deletedCounts = { votes: 0, categories: 0 };
+    const deletedCounts = { votes: 0, categories: 0, comments: 0, commentVotes: 0 };
 
-    // Delete related votes first
+    // Soft-delete related comments first
+    const { data: commentsToDelete, error: findCommentsError } = await supabase
+      .from('comments')
+      .select('id')
+      .eq('link_id', linkId)
+      .eq('is_deleted', false);
+
+    if (findCommentsError) {
+      return {
+        success: false,
+        message: `Error finding comments: ${findCommentsError.message}`
+      };
+    }
+
+    if (commentsToDelete && commentsToDelete.length > 0) {
+      const { data: deletedComments, error: commentsError } = await supabase
+        .from('comments')
+        .update({
+          content: '[deleted]',
+          author_name: '[deleted]',
+          is_deleted: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('link_id', linkId)
+        .eq('is_deleted', false)
+        .select();
+
+      if (commentsError) {
+        return {
+          success: false,
+          message: `Error deleting comments: ${commentsError.message}`
+        };
+      }
+
+      deletedCounts.comments = deletedComments?.length || 0;
+
+      // Delete comment votes for the soft-deleted comments
+      const commentIds = commentsToDelete.map(c => c.id);
+      const { data: deletedCommentVotes, error: commentVotesError } = await supabase
+        .from('comment_votes')
+        .delete()
+        .in('comment_id', commentIds)
+        .select();
+
+      if (commentVotesError) {
+        return {
+          success: false,
+          message: `Error deleting comment votes: ${commentVotesError.message}`
+        };
+      }
+
+      deletedCounts.commentVotes = deletedCommentVotes?.length || 0;
+    }
+
+    // Delete related votes
     const { data: deletedVotes, error: votesError } = await supabase
       .from('votes')
       .delete()
@@ -136,17 +294,22 @@ export async function deleteLink(url, supabase) {
  * Main CLI function
  */
 async function main() {
-  const url = parseArguments(process.argv);
+  const input = parseArguments(process.argv);
 
-  if (!url) {
-    console.error('❌ Error: Please provide a URL as an argument.');
-    console.error('Usage: node scripts/delete-link.js <URL>');
-    console.error('Example: node scripts/delete-link.js https://example.com');
+  if (!input) {
+    console.error('❌ Error: Please provide a URL or comment ID as an argument.');
+    console.error('Usage: node scripts/delete-link.js <URL|COMMENT_ID>');
+    console.error('Examples:');
+    console.error('  node scripts/delete-link.js https://example.com');
+    console.error('  node scripts/delete-link.js 123e4567-e89b-12d3-a456-426614174000');
     process.exit(1);
   }
 
-  if (!validateUrl(url)) {
-    console.error(`❌ Error: "${url}" is not a valid HTTP/HTTPS URL.`);
+  let inputType;
+  try {
+    inputType = parseInputType(input);
+  } catch (error) {
+    console.error(`❌ ${error.message}`);
     process.exit(1);
   }
 
@@ -168,22 +331,40 @@ async function main() {
     }
   });
 
-  console.log(`🔍 Searching for link: ${url}`);
+  let result;
 
-  const result = await deleteLink(url, supabase);
+  if (inputType.type === 'url') {
+    console.log(`🔍 Searching for link: ${inputType.value}`);
+    result = await deleteLink(inputType.value, supabase);
+  } else if (inputType.type === 'comment_id') {
+    console.log(`🔍 Searching for comment: ${inputType.value}`);
+    result = await deleteComment(inputType.value, supabase);
+  }
 
   if (result.success) {
     console.log(`✅ ${result.message}`);
+    
     if (result.deletedLink) {
       console.log(`📋 Deleted link details:`);
       console.log(`   Title: ${result.deletedLink.title}`);
       console.log(`   ID: ${result.deletedLink.id}`);
       console.log(`   Created: ${new Date(result.deletedLink.created_at).toLocaleString()}`);
+      
+      if (result.deletedCounts) {
+        console.log(`🗑️  Related data deleted:`);
+        console.log(`   Votes: ${result.deletedCounts.votes}`);
+        console.log(`   Category mappings: ${result.deletedCounts.categories}`);
+        console.log(`   Comments: ${result.deletedCounts.comments}`);
+        console.log(`   Comment votes: ${result.deletedCounts.commentVotes}`);
+      }
     }
-    if (result.deletedCounts) {
-      console.log(`🗑️  Related data deleted:`);
-      console.log(`   Votes: ${result.deletedCounts.votes}`);
-      console.log(`   Category mappings: ${result.deletedCounts.categories}`);
+    
+    if (result.deletedComment) {
+      console.log(`📋 Deleted comment details:`);
+      console.log(`   ID: ${result.deletedComment.id}`);
+      console.log(`   Original content: ${result.deletedComment.content.substring(0, 100)}${result.deletedComment.content.length > 100 ? '...' : ''}`);
+      console.log(`   Original author: ${result.deletedComment.author_name || 'Anonymous'}`);
+      console.log(`   Created: ${new Date(result.deletedComment.created_at).toLocaleString()}`);
     }
   } else {
     console.error(`❌ ${result.message}`);

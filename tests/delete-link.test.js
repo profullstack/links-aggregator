@@ -1,21 +1,66 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deleteLink, validateUrl, parseArguments } from '../scripts/delete-link.js';
+import {
+  deleteLink,
+  deleteComment,
+  validateUrl,
+  validateUuid,
+  parseArguments,
+  parseInputType
+} from '../scripts/delete-link.js';
 
 // Mock Supabase client
-const mockSupabase = {
-  from: vi.fn(() => ({
-    select: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        single: vi.fn()
-      }))
+let mockSupabase;
+
+function createMockSupabase() {
+  const mockSelect = vi.fn();
+  const mockDelete = vi.fn();
+  const mockUpdate = vi.fn();
+  const mockEq = vi.fn();
+  const mockIn = vi.fn();
+  const mockSingle = vi.fn();
+  const mockSelectAfterDelete = vi.fn();
+  const mockSelectAfterUpdate = vi.fn();
+  const mockSelectAfterIn = vi.fn();
+
+  return {
+    from: vi.fn(() => ({
+      select: mockSelect.mockReturnValue({
+        eq: mockEq.mockReturnValue({
+          single: mockSingle,
+          select: mockSelectAfterIn
+        }),
+        in: mockIn.mockReturnValue({
+          select: mockSelectAfterIn
+        })
+      }),
+      delete: mockDelete.mockReturnValue({
+        eq: mockEq.mockReturnValue({
+          select: mockSelectAfterDelete
+        }),
+        in: mockIn.mockReturnValue({
+          select: mockSelectAfterIn
+        })
+      }),
+      update: mockUpdate.mockReturnValue({
+        eq: mockEq.mockReturnValue({
+          select: mockSelectAfterUpdate
+        })
+      })
     })),
-    delete: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        select: vi.fn()
-      }))
-    }))
-  }))
-};
+    // Expose mocks for easier access in tests
+    _mocks: {
+      select: mockSelect,
+      delete: mockDelete,
+      update: mockUpdate,
+      eq: mockEq,
+      in: mockIn,
+      single: mockSingle,
+      selectAfterDelete: mockSelectAfterDelete,
+      selectAfterUpdate: mockSelectAfterUpdate,
+      selectAfterIn: mockSelectAfterIn
+    }
+  };
+}
 
 // Mock process.exit and console methods
 const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {});
@@ -25,6 +70,7 @@ const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 describe('CLI Delete Link Script', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSupabase = createMockSupabase();
   });
 
   afterEach(() => {
@@ -96,14 +142,32 @@ describe('CLI Delete Link Script', () => {
       };
 
       // Mock successful link lookup
-      mockSupabase.from().select().eq().single.mockResolvedValueOnce({
+      mockSupabase._mocks.single.mockResolvedValueOnce({
         data: mockLinkData,
         error: null
       });
 
-      // Mock successful deletion
-      mockSupabase.from().delete().eq().select.mockResolvedValueOnce({
+      // Mock successful votes deletion
+      mockSupabase._mocks.selectAfterDelete.mockResolvedValueOnce({
+        data: [],
+        error: null
+      });
+
+      // Mock successful categories deletion
+      mockSupabase._mocks.selectAfterDelete.mockResolvedValueOnce({
+        data: [],
+        error: null
+      });
+
+      // Mock successful link deletion
+      mockSupabase._mocks.selectAfterDelete.mockResolvedValueOnce({
         data: [mockLinkData],
+        error: null
+      });
+
+      // Mock comments lookup (no comments)
+      mockSupabase._mocks.selectAfterIn.mockResolvedValueOnce({
+        data: [],
         error: null
       });
 
@@ -185,11 +249,167 @@ describe('CLI Delete Link Script', () => {
     });
   });
 
+  describe('validateUuid', () => {
+    it('should return true for valid UUID v4', () => {
+      expect(validateUuid('123e4567-e89b-12d3-a456-426614174000')).toBe(true);
+    });
+
+    it('should return true for valid UUID v1', () => {
+      expect(validateUuid('6ba7b810-9dad-11d1-80b4-00c04fd430c8')).toBe(true);
+    });
+
+    it('should return false for invalid UUID format', () => {
+      expect(validateUuid('not-a-uuid')).toBe(false);
+    });
+
+    it('should return false for UUID without hyphens', () => {
+      expect(validateUuid('123e4567e89b12d3a456426614174000')).toBe(false);
+    });
+
+    it('should return false for empty string', () => {
+      expect(validateUuid('')).toBe(false);
+    });
+
+    it('should return false for null or undefined', () => {
+      expect(validateUuid(null)).toBe(false);
+      expect(validateUuid(undefined)).toBe(false);
+    });
+  });
+
+  describe('parseInputType', () => {
+    it('should identify valid URL as url type', () => {
+      const result = parseInputType('https://example.com');
+      expect(result).toEqual({ type: 'url', value: 'https://example.com' });
+    });
+
+    it('should identify valid UUID as comment_id type', () => {
+      const uuid = '123e4567-e89b-12d3-a456-426614174000';
+      const result = parseInputType(uuid);
+      expect(result).toEqual({ type: 'comment_id', value: uuid });
+    });
+
+    it('should throw error for invalid input', () => {
+      expect(() => parseInputType('invalid-input')).toThrow('Invalid input');
+    });
+
+    it('should throw error for empty input', () => {
+      expect(() => parseInputType('')).toThrow('Invalid input');
+    });
+  });
+
+  describe('deleteComment', () => {
+    it('should successfully soft-delete existing comment', async () => {
+      const testCommentId = '123e4567-e89b-12d3-a456-426614174000';
+      const mockCommentData = {
+        id: testCommentId,
+        content: 'This is a test comment',
+        author_name: 'TestUser',
+        is_deleted: false,
+        created_at: '2023-01-01T00:00:00Z'
+      };
+
+      // Mock successful comment lookup
+      mockSupabase.from().select().eq().single.mockResolvedValueOnce({
+        data: mockCommentData,
+        error: null
+      });
+
+      // Mock successful soft-deletion
+      mockSupabase.from().update().eq().select.mockResolvedValueOnce({
+        data: [{ ...mockCommentData, content: '[deleted]', author_name: '[deleted]', is_deleted: true }],
+        error: null
+      });
+
+      const result = await deleteComment(testCommentId, mockSupabase);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('successfully soft-deleted');
+      expect(result.deletedComment).toEqual(mockCommentData);
+    });
+
+    it('should handle comment not found', async () => {
+      const testCommentId = '123e4567-e89b-12d3-a456-426614174000';
+
+      // Mock comment not found
+      mockSupabase._mocks.single.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST116' }
+      });
+
+      const result = await deleteComment(testCommentId, mockSupabase);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('not found');
+    });
+
+    it('should handle already deleted comment', async () => {
+      const testCommentId = '123e4567-e89b-12d3-a456-426614174000';
+      const mockCommentData = {
+        id: testCommentId,
+        content: '[deleted]',
+        author_name: '[deleted]',
+        is_deleted: true
+      };
+
+      // Mock comment already deleted
+      mockSupabase.from().select().eq().single.mockResolvedValueOnce({
+        data: mockCommentData,
+        error: null
+      });
+
+      const result = await deleteComment(testCommentId, mockSupabase);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('already deleted');
+    });
+
+    it('should handle database update error', async () => {
+      const testCommentId = '123e4567-e89b-12d3-a456-426614174000';
+      const mockCommentData = {
+        id: testCommentId,
+        content: 'Test comment',
+        author_name: 'TestUser',
+        is_deleted: false
+      };
+
+      // Mock successful comment lookup
+      mockSupabase.from().select().eq().single.mockResolvedValueOnce({
+        data: mockCommentData,
+        error: null
+      });
+
+      // Mock update error
+      mockSupabase.from().update().eq().select.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Update failed' }
+      });
+
+      const result = await deleteComment(testCommentId, mockSupabase);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Error deleting comment');
+    });
+
+    it('should handle unexpected errors gracefully', async () => {
+      const testCommentId = '123e4567-e89b-12d3-a456-426614174000';
+
+      // Mock unexpected error
+      mockSupabase.from().select().eq().single.mockRejectedValueOnce(
+        new Error('Unexpected error')
+      );
+
+      const result = await deleteComment(testCommentId, mockSupabase);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Unexpected error');
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle very long URLs', async () => {
       const longUrl = 'https://example.com/' + 'a'.repeat(2000);
       
-      mockSupabase.from().select().eq().single.mockResolvedValueOnce({
+      mockSupabase._mocks.single.mockResolvedValueOnce({
         data: null,
         error: { code: 'PGRST116' }
       });
@@ -213,6 +433,12 @@ describe('CLI Delete Link Script', () => {
     it('should validate URL before attempting deletion', () => {
       expect(validateUrl('https://example.com/path?query=test#fragment')).toBe(true);
       expect(validateUrl('ftp://example.com')).toBe(false); // Only HTTP/HTTPS should be valid
+    });
+
+    it('should handle malformed UUIDs', () => {
+      expect(validateUuid('123e4567-e89b-12d3-a456')).toBe(false); // Too short
+      expect(validateUuid('123e4567-e89b-12d3-a456-426614174000-extra')).toBe(false); // Too long
+      expect(validateUuid('ggge4567-e89b-12d3-a456-426614174000')).toBe(false); // Invalid characters
     });
   });
 });
