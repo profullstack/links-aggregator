@@ -61,6 +61,8 @@ export async function GET({ url }) {
 		const category = url.searchParams.get('category');
 
 		if (category) {
+			console.log('Filtering by category:', category);
+			
 			// First, find the category ID by name (case-insensitive)
 			const { data: categoryData } = await supabase
 				.from('categories')
@@ -68,7 +70,10 @@ export async function GET({ url }) {
 				.ilike('name', category)
 				.single();
 
+			console.log('Found category:', categoryData);
+
 			if (!categoryData) {
+				console.log('No category found for:', category);
 				return json({ links: [] }); // No category found
 			}
 
@@ -92,9 +97,9 @@ export async function GET({ url }) {
 						tags
 					)
 				`)
-				.eq('category_id', categoryData.id)
-				.order('created_at', { ascending: false })
-				.range(offset, offset + limit - 1);
+				.eq('category_id', categoryData.id);
+
+			console.log('Link categories query result:', data, error);
 
 			if (error) {
 				console.error('Category filter error:', error);
@@ -105,6 +110,8 @@ export async function GET({ url }) {
 			const links = (data || [])
 				.map(item => item.links)
 				.filter(link => link && link.is_public);
+
+			console.log('Filtered links:', links.length);
 
 			return json({ links });
 		} else {
