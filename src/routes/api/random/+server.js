@@ -11,6 +11,8 @@ export async function GET({ url }) {
 	try {
 		const onionOnly = url.searchParams.get('onion') === 'true';
 		
+		console.log('Random API called, onionOnly:', onionOnly);
+		
 		let query = supabase
 			.from('links')
 			.select('*')
@@ -18,23 +20,51 @@ export async function GET({ url }) {
 
 		// Filter for onion URLs only if requested
 		if (onionOnly) {
-			query = query.like('url', '%.onion%');
+			query = query.or('url.like.%.onion,url.like.%.onion/%');
 		}
 
 		// Get total count first
-		const { count } = await query;
+		const { count, error: countError } = await query;
+		
+		console.log('Total links count:', count, 'Error:', countError);
 		
 		if (!count || count === 0) {
+			// If no onion links found, try all links
+			if (onionOnly) {
+				console.log('No onion links found, trying all links...');
+				const allLinksQuery = supabase
+					.from('links')
+					.select('*')
+					.eq('is_public', true);
+				
+				const { count: allCount } = await allLinksQuery;
+				console.log('All links count:', allCount);
+				
+				if (allCount > 0) {
+					const randomOffset = Math.floor(Math.random() * allCount);
+					const { data, error } = await allLinksQuery
+						.range(randomOffset, randomOffset)
+						.limit(1);
+					
+					if (!error && data && data.length > 0) {
+						return json({ link: data[0] });
+					}
+				}
+			}
+			
 			return json({ error: 'No links found' }, { status: 404 });
 		}
 
 		// Get a random offset
 		const randomOffset = Math.floor(Math.random() * count);
+		console.log('Random offset:', randomOffset);
 
 		// Fetch one random link
 		const { data, error } = await query
 			.range(randomOffset, randomOffset)
 			.limit(1);
+
+		console.log('Random link result:', data, 'Error:', error);
 
 		if (error) {
 			console.error('Random link error:', error);
