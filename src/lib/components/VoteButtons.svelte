@@ -150,6 +150,7 @@
 				: 'bg-white text-gray-600 border-gray-300 hover:bg-green-50 hover:text-green-600 hover:border-green-300'
 		} {loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
 		title="Upvote"
+		aria-label="Upvote this link"
 	>
 		<svg class="{sizeClasses[size].icon}" fill="currentColor" viewBox="0 0 20 20">
 			<path
@@ -179,6 +180,7 @@
 				: 'bg-white text-gray-600 border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300'
 		} {loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
 		title="Downvote"
+		aria-label="Downvote this link"
 	>
 		<svg class="{sizeClasses[size].icon}" fill="currentColor" viewBox="0 0 20 20">
 			<path
