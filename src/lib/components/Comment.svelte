@@ -1,5 +1,5 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import CommentForm from './CommentForm.svelte';
 
 	export let comment;
@@ -12,6 +12,20 @@
 	let voteLoading = false;
 	let userVote = null;
 	let voteScore = comment.vote_count || 0;
+
+	// Load user's vote status when component mounts
+	onMount(async () => {
+		try {
+			const response = await fetch(`/api/comment-votes?commentId=${comment.id}`);
+			if (response.ok) {
+				const data = await response.json();
+				userVote = data.userVote;
+				voteScore = data.totalScore;
+			}
+		} catch (err) {
+			console.error('Failed to load vote status:', err);
+		}
+	});
 
 	// Format date for display
 	function formatDate(dateString) {
