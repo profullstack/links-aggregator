@@ -176,6 +176,23 @@
 											<span>{getDomainFromUrl(link.url)}</span>
 											<span>•</span>
 											<span>{formatDate(link.created_at)}</span>
+											{#if link.categories && link.categories.length > 0}
+												<span>•</span>
+												<div class="flex items-center space-x-1">
+													{#each link.categories.slice(0, 2) as category}
+														<a
+															href="/category/{category.name.toLowerCase()}"
+															class="bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-0.5 rounded text-xs font-medium transition-colors"
+															style="border-left: 3px solid {category.color}"
+														>
+															{category.name}
+														</a>
+													{/each}
+													{#if link.categories.length > 2}
+														<span class="text-gray-400">+{link.categories.length - 2}</span>
+													{/if}
+												</div>
+											{/if}
 											{#if link.tags && link.tags.length > 0}
 												<span>•</span>
 												<div class="flex items-center space-x-1">

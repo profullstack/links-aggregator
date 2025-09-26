@@ -115,10 +115,19 @@ export async function GET({ url }) {
 
 			return json({ links });
 		} else {
-			// Get all links without category filtering
+			// Get all links without category filtering, including category information
 			const { data, error } = await supabase
 				.from('links')
-				.select('*')
+				.select(`
+					*,
+					link_categories (
+						categories (
+							id,
+							name,
+							color
+						)
+					)
+				`)
 				.eq('is_public', true)
 				.order('created_at', { ascending: false })
 				.range(offset, offset + limit - 1);
@@ -128,7 +137,16 @@ export async function GET({ url }) {
 				return json({ error: error.message }, { status: 500 });
 			}
 
-			return json({ links: data || [] });
+			// Transform the data to include categories array
+			const linksWithCategories = (data || []).map(link => ({
+				...link,
+				categories: link.link_categories?.map(lc => lc.categories) || []
+			}));
+
+			// Remove the link_categories property as it's no longer needed
+			const cleanedLinks = linksWithCategories.map(({ link_categories, ...link }) => link);
+
+			return json({ links: cleanedLinks });
 		}
 	} catch (err) {
 		console.error('API error:', err);
