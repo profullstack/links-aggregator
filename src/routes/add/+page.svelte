@@ -119,6 +119,16 @@
 	<div class="bg-white shadow rounded-lg p-6">
 		<h1 class="text-3xl font-bold text-gray-900 mb-6">Add Links</h1>
 		
+		<!-- Submission Rules -->
+		<div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+			<h2 class="text-lg font-semibold text-yellow-800 mb-2">📋 Submission Guidelines</h2>
+			<div class="text-sm text-yellow-700 space-y-2">
+				<p><strong>✅ Welcome:</strong> Most knowledge-sharing content is encouraged - educational resources, tutorials, documentation, tools, news, and legitimate research.</p>
+				<p><strong>❌ Prohibited:</strong> Child exploitation material (CP) will be deleted immediately.</p>
+				<p><strong>📝 Note:</strong> All submissions are subject to moderation. Please ensure your links contribute value to the community.</p>
+			</div>
+		</div>
+		
 		<form on:submit|preventDefault={handleSubmit} class="space-y-6">
 			<div>
 				<label for="bulk-urls" class="block text-sm font-medium text-gray-700 mb-2">
