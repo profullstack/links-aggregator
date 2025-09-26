@@ -170,7 +170,7 @@
 					
 					<div class="flex items-center justify-between">
 						<div class="flex items-center space-x-4">
-							<VoteButtons linkId={link.id} initialScore={link.vote_count} size="large" />
+							<VoteButtons linkId={link.id} initialScore={link.vote_count} size="normal" />
 							<CopyButton url={link.url} size="normal" />
 						</div>
 						

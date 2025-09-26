@@ -4,6 +4,7 @@
 
 	export let comment;
 	export let depth = 0;
+	export let linkId;
 
 	const dispatch = createEventDispatcher();
 
@@ -164,7 +165,7 @@
 			{#if showReplyForm}
 				<div class="mt-4">
 					<CommentForm
-						linkId={comment.link_id}
+						{linkId}
 						parentId={comment.id}
 						placeholder="Reply to this comment..."
 						on:comment-added={handleReplySubmitted}

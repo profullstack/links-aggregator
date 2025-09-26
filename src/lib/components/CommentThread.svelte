@@ -46,9 +46,10 @@
 			{#each threadedComments as { comment, depth, replies }}
 				<div class="comment-with-replies">
 					<!-- Main comment -->
-					<Comment 
-						{comment} 
+					<Comment
+						{comment}
 						{depth}
+						{linkId}
 						on:reply-added={handleReplyAdded}
 					/>
 					

@@ -9,7 +9,6 @@
 
 	let content = '';
 	let authorName = '';
-	let authorEmail = '';
 	let submitting = false;
 	let error = null;
 
@@ -38,7 +37,7 @@
 					parentId,
 					content: content.trim(),
 					authorName: authorName.trim() || null,
-					authorEmail: authorEmail.trim() || null
+					authorEmail: null
 				})
 			});
 
@@ -48,7 +47,6 @@
 				// Clear form
 				content = '';
 				authorName = '';
-				authorEmail = '';
 				
 				// Dispatch success event
 				dispatch('comment-added', {
@@ -69,7 +67,6 @@
 	function handleCancel() {
 		content = '';
 		authorName = '';
-		authorEmail = '';
 		error = null;
 		dispatch('cancel');
 	}
@@ -82,35 +79,19 @@
 <div class="comment-form bg-white border border-gray-200 rounded-lg p-4">
 	<form on:submit|preventDefault={handleSubmit}>
 		<!-- Author info (optional) -->
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-			<div>
-				<label for="author-name" class="block text-sm font-medium text-gray-700 mb-1">
-					Name (optional)
-				</label>
-				<input
-					id="author-name"
-					type="text"
-					bind:value={authorName}
-					placeholder="Anonymous"
-					maxlength="100"
-					class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-					disabled={submitting}
-				/>
-			</div>
-			<div>
-				<label for="author-email" class="block text-sm font-medium text-gray-700 mb-1">
-					Email (optional, not displayed)
-				</label>
-				<input
-					id="author-email"
-					type="email"
-					bind:value={authorEmail}
-					placeholder="your@email.com"
-					maxlength="255"
-					class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-					disabled={submitting}
-				/>
-			</div>
+		<div class="mb-4">
+			<label for="author-name" class="block text-sm font-medium text-gray-700 mb-1">
+				Name (optional)
+			</label>
+			<input
+				id="author-name"
+				type="text"
+				bind:value={authorName}
+				placeholder="Anonymous"
+				maxlength="100"
+				class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+				disabled={submitting}
+			/>
 		</div>
 
 		<!-- Comment content -->
