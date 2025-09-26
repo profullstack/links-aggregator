@@ -1,14 +1,10 @@
-import fetch from 'node-fetch';
-import { SocksProxyAgent } from 'socks-proxy-agent';
-
 /**
  * Default options for link checking
  */
 const DEFAULT_OPTIONS = {
   timeout: 10000, // 10 seconds
   batchSize: 10,
-  maxConsecutiveFailures: 3,
-  torProxy: 'socks5://127.0.0.1:9050' // Default Tor proxy
+  maxConsecutiveFailures: 3
 };
 
 /**
@@ -21,31 +17,7 @@ function isOnionUrl(url) {
 }
 
 /**
- * Create fetch options with appropriate proxy for onion URLs
- * @param {string} url - The URL being checked
- * @param {Object} options - Configuration options
- * @returns {Object} - Fetch options
- */
-function createFetchOptions(url, options = {}) {
-  const fetchOptions = {
-    method: 'HEAD', // Use HEAD to minimize data transfer
-    timeout: options.timeout || DEFAULT_OPTIONS.timeout,
-    headers: {
-      'User-Agent': 'LinkChecker/1.0'
-    }
-  };
-
-  // Use Tor proxy for onion URLs
-  if (isOnionUrl(url) && options.torProxy !== false) {
-    const proxyUrl = options.torProxy || DEFAULT_OPTIONS.torProxy;
-    fetchOptions.agent = new SocksProxyAgent(proxyUrl);
-  }
-
-  return fetchOptions;
-}
-
-/**
- * Check a single link's availability
+ * Check a single link's availability using the same approach as metadata fetching
  * @param {string} url - The URL to check
  * @param {Object} options - Configuration options
  * @returns {Promise<Object>} - Check result
@@ -55,23 +27,49 @@ export async function checkLink(url, options = {}) {
   console.log(`🔗 [Link Checker] Checking URL: ${url}`);
   
   try {
-    const fetchOptions = createFetchOptions(url, options);
-    
-    // Log if using Tor proxy for onion URLs
+    let response;
+
+    // If it's an onion URL, use node-fetch with SOCKS proxy (same as metadata.js)
     if (isOnionUrl(url)) {
       console.log(`🧅 [Link Checker] Using Tor proxy for onion URL: ${url}`);
+      
+      try {
+        // Import node-fetch and SOCKS proxy agent
+        const fetch = (await import('node-fetch')).default;
+        const { SocksProxyAgent } = await import('socks-proxy-agent');
+        
+        // Create SOCKS proxy agent with socks5h:// for DNS leak prevention
+        const agent = new SocksProxyAgent('socks5h://127.0.0.1:9050');
+        
+        // Use node-fetch with SOCKS proxy and HEAD method
+        response = await fetch(url, {
+          method: 'HEAD',
+          agent,
+          timeout: options.timeout || DEFAULT_OPTIONS.timeout,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; LinksAggregator/1.0)'
+          }
+        });
+      } catch (proxyError) {
+        console.log(`💥 [Link Checker] Tor proxy error for ${url}: ${proxyError.message}`);
+        return {
+          url,
+          status: 'dead',
+          statusCode: null,
+          errorMessage: `Tor proxy error: ${proxyError.message}`,
+          checkedAt
+        };
+      }
+    } else {
+      // Regular clearnet fetch using global fetch with HEAD method
+      response = await fetch(url, {
+        method: 'HEAD',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LinksAggregator/1.0)'
+        },
+        signal: AbortSignal.timeout(options.timeout || DEFAULT_OPTIONS.timeout)
+      });
     }
-    
-    // Create a timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timeout')), fetchOptions.timeout);
-    });
-    
-    // Race between fetch and timeout
-    const response = await Promise.race([
-      fetch(url, fetchOptions),
-      timeoutPromise
-    ]);
 
     if (response.ok) {
       console.log(`✅ [Link Checker] URL is LIVE: ${url} (${response.status})`);
