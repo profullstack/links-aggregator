@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import VoteButtons from '$lib/components/VoteButtons.svelte';
+	import CopyButton from '$lib/components/CopyButton.svelte';
 
 	let category = null;
 	let links = [];
@@ -203,6 +204,7 @@
 									
 									<div class="flex items-center space-x-4">
 										<VoteButtons linkId={link.id} initialScore={link.vote_count} size="normal" />
+										<CopyButton url={link.url} size="normal" />
 										<a
 											href={link.url}
 											target="_blank"

@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import VoteButtons from '$lib/components/VoteButtons.svelte';
+	import CopyButton from '$lib/components/CopyButton.svelte';
 
 	/** @type {Array<any>} */
 	let links = [];
@@ -239,9 +240,10 @@
 										</div>
 									</div>
 									
-									<!-- Vote buttons -->
-									<div class="flex-shrink-0 ml-4">
+									<!-- Vote buttons and copy button -->
+									<div class="flex-shrink-0 ml-4 flex items-center space-x-2">
 										<VoteButtons linkId={link.id} initialScore={link.vote_count} size="small" />
+										<CopyButton url={link.url} size="small" />
 									</div>
 								</div>
 							</div>

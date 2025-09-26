@@ -3,6 +3,7 @@
 	import { getOnionUrl, isTorEnabled, getShareableUrl } from '$lib/tor.js';
 	import { goto } from '$app/navigation';
 	import VoteButtons from '$lib/components/VoteButtons.svelte';
+	import CopyButton from '$lib/components/CopyButton.svelte';
 
 	let mounted = false;
 	let onionUrl = '';
@@ -187,6 +188,7 @@
 											{/if}
 											<div class="flex items-center justify-between mt-1">
 												<VoteButtons linkId={link.id} initialScore={link.vote_count} size="small" />
+												<CopyButton url={link.url} size="small" className="ml-2" />
 											</div>
 										</div>
 									</div>
