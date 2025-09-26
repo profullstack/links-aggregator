@@ -137,10 +137,13 @@
 					<VoteButtons linkId={link.id} initialScore={link.vote_count} {size} />
 					<a
 						href="/links/{link.id}"
-						class="text-blue-500 hover:text-blue-700"
+						class="text-blue-500 hover:text-blue-700 flex items-center space-x-1"
 						title="View comments and discuss this link"
 					>
-						💬
+						<span>💬</span>
+						{#if link.comment_count !== undefined}
+							<span class="text-xs">{link.comment_count}</span>
+						{/if}
 					</a>
 					<CopyButton url={link.url} {size} />
 					<a

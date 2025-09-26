@@ -111,10 +111,18 @@ export async function GET({ url }) {
 				return json({ error: error.message }, { status: 500 });
 			}
 
-			// Transform the data to include categories array
+			// Get comment count for this link
+			const { count: commentCount } = await supabase
+				.from('comments')
+				.select('*', { count: 'exact', head: true })
+				.eq('link_id', id)
+				.eq('is_deleted', false);
+
+			// Transform the data to include categories array and comment count
 			const linkWithCategories = {
 				...data,
-				categories: data.link_categories?.map(lc => lc.categories) || []
+				categories: data.link_categories?.map(lc => lc.categories) || [],
+				comment_count: commentCount || 0
 			};
 
 			// Remove the link_categories property as it's no longer needed
@@ -177,9 +185,32 @@ export async function GET({ url }) {
 				.map(item => item.links)
 				.filter(link => link && link.is_public);
 
-			console.log('Filtered links:', links.length);
+			// Get comment counts for all links
+			const linkIds = links.map(link => link.id);
+			const commentCounts = {};
+			
+			if (linkIds.length > 0) {
+				const { data: commentData } = await supabase
+					.from('comments')
+					.select('link_id')
+					.in('link_id', linkIds)
+					.eq('is_deleted', false);
+				
+				// Count comments per link
+				(commentData || []).forEach(comment => {
+					commentCounts[comment.link_id] = (commentCounts[comment.link_id] || 0) + 1;
+				});
+			}
 
-			return json({ links });
+			// Add comment counts to links
+			const linksWithCommentCounts = links.map(link => ({
+				...link,
+				comment_count: commentCounts[link.id] || 0
+			}));
+
+			console.log('Filtered links:', linksWithCommentCounts.length);
+
+			return json({ links: linksWithCommentCounts });
 		} else {
 			// Get all links without category filtering, including category information
 			let query = supabase
@@ -216,8 +247,28 @@ export async function GET({ url }) {
 				categories: link.link_categories?.map(lc => lc.categories) || []
 			}));
 
-			// Remove the link_categories property as it's no longer needed
-			const cleanedLinks = linksWithCategories.map(({ link_categories, ...link }) => link);
+			// Get comment counts for all links
+			const linkIds = linksWithCategories.map(link => link.id);
+			const commentCounts = {};
+			
+			if (linkIds.length > 0) {
+				const { data: commentData } = await supabase
+					.from('comments')
+					.select('link_id')
+					.in('link_id', linkIds)
+					.eq('is_deleted', false);
+				
+				// Count comments per link
+				(commentData || []).forEach(comment => {
+					commentCounts[comment.link_id] = (commentCounts[comment.link_id] || 0) + 1;
+				});
+			}
+
+			// Remove the link_categories property and add comment counts
+			const cleanedLinks = linksWithCategories.map(({ link_categories, ...link }) => ({
+				...link,
+				comment_count: commentCounts[link.id] || 0
+			}));
 
 			return json({ links: cleanedLinks });
 		}
