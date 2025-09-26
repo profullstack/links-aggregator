@@ -217,6 +217,13 @@
 															Last verified: {new Date(link.last_verified_at).toLocaleDateString()}
 														</span>
 													{/if}
+													<a
+														href="/links/{link.id}"
+														class="text-xs text-blue-600 hover:text-blue-800 font-medium"
+														title="View comments and discuss this link"
+													>
+														💬 Discuss
+													</a>
 													<CopyButton url={link.url} size="small" className="ml-2" />
 												</div>
 											</div>

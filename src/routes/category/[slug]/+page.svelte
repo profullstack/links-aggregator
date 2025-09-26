@@ -233,6 +233,13 @@
 									
 									<div class="flex items-center space-x-4">
 										<VoteButtons linkId={link.id} initialScore={link.vote_count} size="normal" />
+										<a
+											href="/links/{link.id}"
+											class="text-blue-500 hover:text-blue-700 font-medium"
+											title="View comments and discuss this link"
+										>
+											💬 Discuss
+										</a>
 										<CopyButton url={link.url} size="normal" />
 										<a
 											href={link.url}
