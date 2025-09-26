@@ -82,6 +82,46 @@ export async function GET({ url }) {
 		const offset = parseInt(url.searchParams.get('offset') || '0');
 		const category = url.searchParams.get('category');
 		const sortBy = url.searchParams.get('sort') || 'latest'; // 'latest' or 'votes'
+		const id = url.searchParams.get('id');
+
+		// Handle single link fetch by ID
+		if (id) {
+			const { data, error } = await supabase
+				.from('links')
+				.select(`
+					*,
+					link_categories (
+						categories (
+							id,
+							name,
+							color
+						)
+					)
+				`)
+				.eq('id', id)
+				.eq('is_public', true)
+				.single();
+
+			if (error) {
+				if (error.code === 'PGRST116') {
+					// No rows returned
+					return json({ error: 'Link not found' }, { status: 404 });
+				}
+				console.error('Single link fetch error:', error);
+				return json({ error: error.message }, { status: 500 });
+			}
+
+			// Transform the data to include categories array
+			const linkWithCategories = {
+				...data,
+				categories: data.link_categories?.map(lc => lc.categories) || []
+			};
+
+			// Remove the link_categories property as it's no longer needed
+			const { link_categories, ...cleanedLink } = linkWithCategories;
+
+			return json({ links: [cleanedLink] });
+		}
 
 		if (category) {
 			console.log('Filtering by category:', category);
