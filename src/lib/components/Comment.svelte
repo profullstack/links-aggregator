@@ -163,14 +163,26 @@
 
 		<!-- Comment content -->
 		<div class="flex-1 min-w-0">
-			<div class="bg-gray-50 rounded-lg p-3">
+			<div class="bg-gray-50 rounded-lg p-3 group">
 				<!-- Comment header -->
-				<div class="flex items-center space-x-2 mb-2 text-sm text-gray-600">
-					<span class="font-medium">
-						{comment.author_name || 'Anonymous'}
-					</span>
-					<span>•</span>
-					<span>{formatDate(comment.created_at)}</span>
+				<div class="flex items-center justify-between mb-2 text-sm text-gray-600">
+					<div class="flex items-center space-x-2">
+						<span class="font-medium">
+							{comment.author_name || 'Anonymous'}
+						</span>
+						<span>•</span>
+						<span>{formatDate(comment.created_at)}</span>
+					</div>
+					<!-- Copy comment ID button -->
+					<button
+						type="button"
+						class="opacity-0 group-hover:opacity-100 hover:text-gray-800 transition-all duration-200 p-1 rounded text-xs"
+						title="Copy comment ID"
+						data-comment-id={comment.id}
+						on:click={copyCommentId}
+					>
+						📋
+					</button>
 				</div>
 
 				<!-- Comment text -->
