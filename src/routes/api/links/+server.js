@@ -8,6 +8,28 @@ import { fetchUrlMetadata, detectCategory } from '$lib/metadata.js';
 const supabase = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 /**
+ * Normalize URL by trimming trailing slashes from .onion domains
+ * @param {string} url - URL to normalize
+ * @returns {string} - Normalized URL
+ */
+function normalizeUrl(url) {
+	try {
+		const urlObj = new URL(url);
+		
+		// Check if it's a .onion domain and has a trailing slash with no path
+		if (urlObj.hostname.endsWith('.onion') && urlObj.pathname === '/') {
+			// Remove the trailing slash for .onion domains
+			return url.replace(/\/$/, '');
+		}
+		
+		return url;
+	} catch {
+		// If URL parsing fails, return original URL
+		return url;
+	}
+}
+
+/**
  * Assign categories to links based on detected categories
  * @param {Array} insertedLinks - Links that were successfully inserted
  * @param {Array} validUrls - Original URL data with suggested categories
@@ -180,12 +202,14 @@ export async function POST({ request }) {
 
 			// Basic URL validation
 			try {
-				const urlObj = new URL(item.url);
+				// Normalize the URL first (trim trailing slashes from .onion domains)
+				const normalizedUrl = normalizeUrl(item.url);
+				const urlObj = new URL(normalizedUrl);
 				
 				// Fetch metadata only if title or category not provided
 				let metadata = { title: '', description: '', image: '', siteName: '', category: 'technology' };
 				if (!item.title || !item.category) {
-					metadata = await fetchUrlMetadata(item.url);
+					metadata = await fetchUrlMetadata(normalizedUrl);
 				}
 
 				const title = (item.title || metadata.title || urlObj.hostname).substring(0, 255);
@@ -196,7 +220,7 @@ export async function POST({ request }) {
 				const suggestedCategory = item.category || metadata.category;
 
 				const linkData = {
-					url: item.url,
+					url: normalizedUrl, // Use normalized URL
 					title,
 					description,
 					image_url: metadata.image || null,
@@ -210,7 +234,7 @@ export async function POST({ request }) {
 				};
 
 				validUrls.push(linkData);
-				processedUrls.push(item.url);
+				processedUrls.push(normalizedUrl); // Use normalized URL
 			} catch {
 				// Skip invalid URLs
 				continue;
