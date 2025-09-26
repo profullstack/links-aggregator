@@ -157,7 +157,10 @@ export async function GET({ url }) {
 						created_at,
 						updated_at,
 						is_public,
-						tags
+						tags,
+						status,
+						last_checked_at,
+						last_verified_at
 					)
 				`)
 				.eq('category_id', categoryData.id);
