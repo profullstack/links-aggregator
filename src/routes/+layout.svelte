@@ -15,6 +15,9 @@
 					<a href="/" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
 						Home
 					</a>
+					<a href="/latest" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+						Latest
+					</a>
 					<a href="/add" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
 						Add Links
 					</a>
