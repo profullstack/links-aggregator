@@ -23,59 +23,40 @@ export async function GET({ url }) {
 			query = query.or('url.like.%.onion,url.like.%.onion/%');
 		}
 
-		// Get total count first
-		const { count, error: countError } = await query;
+		// Get all links first to count them
+		const { data: allData, error: fetchError } = await query;
 		
-		console.log('Total links count:', count, 'Error:', countError);
+		console.log('All links data:', allData?.length, 'Error:', fetchError);
 		
-		if (!count || count === 0) {
+		if (!allData || allData.length === 0) {
 			// If no onion links found, try all links
 			if (onionOnly) {
 				console.log('No onion links found, trying all links...');
-				const allLinksQuery = supabase
+				const { data: allLinksData, error: allError } = await supabase
 					.from('links')
 					.select('*')
 					.eq('is_public', true);
 				
-				const { count: allCount } = await allLinksQuery;
-				console.log('All links count:', allCount);
+				console.log('All links data:', allLinksData?.length, 'Error:', allError);
 				
-				if (allCount > 0) {
-					const randomOffset = Math.floor(Math.random() * allCount);
-					const { data, error } = await allLinksQuery
-						.range(randomOffset, randomOffset)
-						.limit(1);
-					
-					if (!error && data && data.length > 0) {
-						return json({ link: data[0] });
-					}
+				if (allLinksData && allLinksData.length > 0) {
+					const randomIndex = Math.floor(Math.random() * allLinksData.length);
+					return json({ link: allLinksData[randomIndex] });
 				}
 			}
 			
 			return json({ error: 'No links found' }, { status: 404 });
 		}
 
-		// Get a random offset
-		const randomOffset = Math.floor(Math.random() * count);
-		console.log('Random offset:', randomOffset);
+		// Get a random link from the results
+		const randomIndex = Math.floor(Math.random() * allData.length);
+		console.log('Random index:', randomIndex, 'of', allData.length);
 
-		// Fetch one random link
-		const { data, error } = await query
-			.range(randomOffset, randomOffset)
-			.limit(1);
+		const randomLink = allData[randomIndex];
 
-		console.log('Random link result:', data, 'Error:', error);
+		console.log('Selected random link:', randomLink);
 
-		if (error) {
-			console.error('Random link error:', error);
-			return json({ error: error.message }, { status: 500 });
-		}
-
-		if (!data || data.length === 0) {
-			return json({ error: 'No random link found' }, { status: 404 });
-		}
-
-		return json({ link: data[0] });
+		return json({ link: randomLink });
 	} catch (err) {
 		console.error('Random API error:', err);
 		return json({ error: 'Internal server error' }, { status: 500 });
