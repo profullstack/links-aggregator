@@ -132,23 +132,19 @@
 							</a>
 						</h1>
 						<!-- Link Status Indicator -->
-						{#if link.status}
+						{#if link.status && link.status !== 'unknown'}
 							<span
 								class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium flex-shrink-0 ml-4"
 								class:bg-green-100={link.status === 'live'}
 								class:text-green-800={link.status === 'live'}
 								class:bg-red-100={link.status === 'dead'}
 								class:text-red-800={link.status === 'dead'}
-								class:bg-gray-100={link.status === 'unknown'}
-								class:text-gray-800={link.status === 'unknown'}
 								title="Link status: {link.status} {link.last_checked_at ? `(checked ${new Date(link.last_checked_at).toLocaleDateString()})` : ''}"
 							>
 								{#if link.status === 'live'}
 									✓ Live
 								{:else if link.status === 'dead'}
 									✗ Dead
-								{:else}
-									? Unknown
 								{/if}
 							</span>
 						{/if}
