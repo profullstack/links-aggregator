@@ -39,7 +39,11 @@ export async function checkLink(url, options = {}) {
         const { SocksProxyAgent } = await import('socks-proxy-agent');
         
         // Create SOCKS proxy agent with socks5h:// for DNS leak prevention
+        // Also disable certificate validation for onion sites (many use self-signed certs)
         const agent = new SocksProxyAgent('socks5h://127.0.0.1:9050');
+        
+        // Disable certificate validation globally for this request
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
         
         // Use node-fetch with SOCKS proxy and HEAD method
         response = await fetch(url, {
@@ -48,8 +52,13 @@ export async function checkLink(url, options = {}) {
           timeout: options.timeout || DEFAULT_OPTIONS.timeout,
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; LinksAggregator/1.0)'
-          }
+          },
+          // Ignore certificate errors for onion sites (many use self-signed certs)
+          rejectUnauthorized: false
         });
+        
+        // Re-enable certificate validation after the request
+        delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
       } catch (proxyError) {
         console.log(`💥 [Link Checker] Tor proxy error for ${url}: ${proxyError.message}`);
         return {
