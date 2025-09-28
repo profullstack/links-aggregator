@@ -153,6 +153,13 @@
 							Highest Ranked
 						</button>
 						<span class="text-gray-300">|</span>
+						<a
+							href="/latest-comments"
+							class="text-green-600 hover:text-green-800 text-sm font-medium transition-colors"
+						>
+							Latest Comments
+						</a>
+						<span class="text-gray-300">|</span>
 						<button
 							on:click={refreshLinks}
 							class="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
